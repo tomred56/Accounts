@@ -42,3 +42,4 @@ Thumbs.db
 # Directories #
 ###############
 __pycache__/
+venv/
