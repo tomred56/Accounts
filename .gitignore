@@ -20,7 +20,7 @@
 *.tar
 *.zip
 
-# Logs and databases #
+# Logs and databases and connectors#
 ######################
 *.log
 *.sql
@@ -28,6 +28,7 @@
 *.dat
 *.bak
 *.dir
+select_db.py
 
 # OS generated files #
 ######################

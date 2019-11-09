@@ -47,7 +47,7 @@ class Form(wx.Panel):
         self.logger = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY, value=self.error)
 
     def do_layout(self):
-        self.boxSizer0 = wx.BoxSizer(orient=wx.VERTICAL)
+        self.boxSizer0 = wx.BoxSizer(orient=wx.HORIZONTAL)
         self.gridSizer0 = wx.FlexGridSizer(rows=1, cols=3, vgap=10, hgap=10)
 
         # Prepare some reusable arguments for calling sizer.Add():
@@ -60,7 +60,7 @@ class Form(wx.Panel):
                  (self.edit_instance, noOptions),
                  (self.deactivate_instance, noOptions)]:
             self.gridSizer0.Add(control, **options)
-        # self.gridSizer0.Add(self.add_instance, *noOptions)
+        # self.gridSizer0.Add(self.new_instance, *noOptions)
         # self.gridSizer0.Add(self.deactivate_instance, *noOptions)
         # self.gridSizer0.Add(self.cancel_change, *noOptions)
 
@@ -89,7 +89,7 @@ class Form(wx.Panel):
         if get_new_instance_name.ShowModal() == wx.ID_OK:
             new_instance_name = get_new_instance_name.GetValue()
             self._log('New name: %s' % new_instance_name)
-            self.records.add_instance(new_instance_name, from_date=datetime.date.today(),
+            self.records.new_instance(new_instance_name, from_date=datetime.date.today(),
                                       parent_ref=self.records.parent_ref)
             self.load_class_data()
             self.instances.Append(new_instance_name)
@@ -403,6 +403,175 @@ class FrameWithForms(wx.Frame):
             notebook.AddPage(tabs[-1], records.cls_shelf_key)
         self.SetClientSize(notebook.GetBestSize())
 
+
+class FrameForCategory(wx.Frame):
+    def __init__(self, parent, cat, sub_cat, detail, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.cat = cat
+        self.sub_cat = sub_cat
+        self.detail = detail
+        self.error = ''
+        self.create_controls()
+        self.bind_events()
+        self.do_layout()
+    
+    def create_controls(self):
+        """
+        Defines common fields for all record types
+        Sub-classes define local fields
+        """
+        #        instances = self.cat.all_values()
+        self.categories = wx.ListBox(self, style=wx.LB_SINGLE | wx.LB_HSCROLL | wx.LB_NEEDED_SB | wx.LB_SORT,
+                                     choices=self.cat.fetch(), name='Categories')
+        self.add_category = wx.Button(self, label='Add')
+        self.active_category = wx.CheckBox(self, label='Active', style=wx.ALIGN_RIGHT)
+        self.active_category.Disable()
+        self.edit_category = wx.Button(self, label='Edit')
+        self.edit_category.Disable()
+        
+        self.sub_categories = wx.ListBox(self, style=wx.LB_SINGLE | wx.LB_HSCROLL | wx.LB_NEEDED_SB | wx.LB_SORT,
+                                         choices=[], name='SubCategories')
+        self.sub_categories.Disable()
+        self.add_sub_category = wx.Button(self, label='Add')
+        self.add_sub_category.Disable()
+        self.active_sub_category = wx.CheckBox(self, label='Active', style=wx.ALIGN_RIGHT)
+        self.active_sub_category.Disable()
+        self.edit_sub_category = wx.Button(self, label='Edit')
+        self.edit_sub_category.Disable()
+        
+        self.details = wx.ListBox(self, style=wx.LB_SINGLE | wx.LB_HSCROLL | wx.LB_NEEDED_SB | wx.LB_SORT,
+                                  choices=[], name='Details')
+        self.details.Disable()
+        self.add_detail = wx.Button(self, label='Add')
+        self.add_detail.Disable()
+        self.active_detail = wx.CheckBox(self, label='Active', style=wx.ALIGN_RIGHT)
+        self.active_detail.Disable()
+        self.edit_detail = wx.Button(self, label='Edit')
+        self.edit_detail.Disable()
+        
+        self.logger = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY, value=self.error)
+    
+    def do_layout(self):
+        self.boxSizer0 = wx.BoxSizer(orient=wx.HORIZONTAL)
+        self.gridSizer0 = wx.GridSizer(rows=2, cols=3, vgap=10, hgap=10)
+        self.gridSizer1 = wx.GridSizer(rows=2, cols=3, vgap=10, hgap=10)
+        self.gridSizer2 = wx.GridSizer(rows=2, cols=3, vgap=10, hgap=10)
+        
+        # Prepare some reusable arguments for calling sizer.Add():
+        expandOption = dict(flag=wx.EXPAND)
+        noOptions = dict()
+        emptySpace = ((0, 0), noOptions)
+        
+        for control, options in \
+                [
+                        emptySpace,
+                        (self.categories, expandOption),
+                        emptySpace,
+                        (self.add_category, noOptions),
+                        (self.edit_category, noOptions),
+                        (self.active_category, noOptions)
+                ]:
+            self.gridSizer0.Add(control, **options)
+        for control, options in \
+                [
+                        emptySpace,
+                        (self.sub_categories, expandOption),
+                        emptySpace,
+                        (self.add_sub_category, noOptions),
+                        (self.edit_sub_category, noOptions),
+                        (self.active_sub_category, noOptions)
+                ]:
+            self.gridSizer1.Add(control, **options)
+        for control, options in \
+                [
+                        emptySpace,
+                        (self.details, expandOption),
+                        emptySpace,
+                        (self.add_detail, noOptions),
+                        (self.edit_detail, noOptions),
+                        (self.active_detail, noOptions)
+                ]:
+            self.gridSizer2.Add(control, **options)
+        
+        for control, options in \
+                [
+                        (self.gridSizer0, dict(border=5, flag=wx.ALL)),
+                        (self.gridSizer1, dict(border=5, flag=wx.ALL)),
+                        (self.gridSizer2, dict(border=5, flag=wx.ALL))
+                ]:
+            self.boxSizer0.Add(control, **options)
+        
+        self.SetSizerAndFit(self.boxSizer0)
+    
+    def bind_events(self):
+        for control, event, handler in \
+                [
+                        (self.categories, wx.EVT_LISTBOX, self.on_instance_selected),
+                        (self.add_category, wx.EVT_BUTTON, self.on_add_instance),
+                        (self.active_category, wx.EVT_CHECKBOX, self.on_deactivate_instance),
+                        (self.edit_category, wx.EVT_BUTTON, self.on_edit_instance),
+                        (self.sub_categories, wx.EVT_LISTBOX, self.on_instance_selected),
+                        (self.add_sub_category, wx.EVT_BUTTON, self.on_add_instance),
+                        (self.active_sub_category, wx.EVT_CHECKBOX, self.on_deactivate_instance),
+                        (self.edit_sub_category, wx.EVT_BUTTON, self.on_edit_instance),
+                        (self.details, wx.EVT_LISTBOX, self.on_instance_selected),
+                        (self.add_detail, wx.EVT_BUTTON, self.on_add_instance),
+                        (self.active_detail, wx.EVT_CHECKBOX, self.on_deactivate_instance),
+                        (self.edit_detail, wx.EVT_BUTTON, self.on_edit_instance)
+                ]:
+            control.Bind(event, handler)
+    
+    def on_instance_selected(self, event):
+        source = event.EventObject.Name
+        if source.lower() == 'categories':
+            self.sub_categories.Set(self.sub_cat.all_values(cat=event.GetString()))
+        self.record = event.GetString()
+        self.records.fetch_instance(unique_name=self.record)
+        for l, f in self.fields:
+            self.field = l.LabelText.lower()
+            if self.field in self.records.attributes.keys():
+                f.Value = self.records.attributes[self.field]
+            else:
+                f.Value = ""
+            f.Enable()
+        self.deactivate_instance.Enable()
+        self.edit_instance.Enable()
+        self._log('Selected: %s' % self.record)
+    
+    def on_add_instance(self, event):
+        get_new_instance_name = wx.TextEntryDialog()
+        get_new_instance_name.Create(None, 'Enter new name', caption=self.instances_name)
+        self._log('Clicked: %s' % event.GetString())
+        if get_new_instance_name.ShowModal() == wx.ID_OK:
+            new_instance_name = get_new_instance_name.GetValue()
+            self._log('New name: %s' % new_instance_name)
+            self.records.new_instance(new_instance_name, from_date=datetime.date.today(),
+                                      parent_ref=self.records.parent_ref)
+            self.load_class_data()
+            self.instances.Append(new_instance_name)
+            selected = self.instances.FindString(new_instance_name)
+            self.instances.SetSelection(selected)
+            self.instances.EnsureVisible(selected)
+    
+    def on_deactivate_instance(self, event):
+        instance_name = wx.TextEntryDialog()
+        if self.records.deactivate_instance(new_from_date=datetime.date.today()):
+            self.load_class_data()
+            self.deactivate_instance.SetValue(False)
+            self.instances.SetSelection(0)
+            self.instances.SetFirstItem(0)
+            self._log('Deleted: %s' % instance_name)
+    
+    def on_edit_instance(self, event):
+        self.record = event.GetString()
+        self._log('Selected: %s' % event.GetString())
+    
+    # Helper method(s):
+    
+    def _log(self, message):
+        """ Private method to append a string to the logger text
+            control. """
+        self.logger.AppendText('%s\n' % message)
 
 """
             if records.cls_shelf_key == 'Institutions':

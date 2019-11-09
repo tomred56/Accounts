@@ -1,315 +1,461 @@
-import shelve
+import re
 from dataclasses import dataclass, field
-from datetime import datetime, date, timedelta
-from typing import Dict, Tuple, ClassVar
+from datetime import datetime
+from typing import Any, Dict
 
-TESTING = True
-START_DATE = date(2019, 1, 1)
-END_DATE = date(2030, 12, 31)
+import pymysql.cursors
+
+from connect_db import select_db
+from statics import *
+
+NOW: date = date(date.today().year, date.today().month, date.today().day)
+T_STRUCTURE: Dict = {}
+K_STRUCTURE: Dict = {}
+ACTIONS = ('initial', 'fetch', 'insert', 'update', 'delete')
 
 
-def raise_param_error(error_no: int, error_msg: str):
-    try:
-        raise ParamError(error_no, error_msg)
-    except ParamError as e:
-        return e.message
+def get_structure():
+    d = select_db(USE_DB)
+    c1 = d.cursor()
+    c1.execute('select * from structure')
+    rows = c1.fetchall()
+    d.close()
+    child = {}
+    for row in rows:
+        if row['parent']:
+            if child.get(row['parent']):
+                child[row['parent']] += (row['key'],)
+            else:
+                child[row['parent']] = ()
+                child[row['parent']] += (row['key'],)
+    for row in rows:
+        T_STRUCTURE[row['table']] = (row['key'], row['parent'], child.get(row['key'], ()), row['table'].title())
+        K_STRUCTURE[row['key']] = (row['table'], row['parent'], child.get(row['key'], ()), row['table'].title())
 
 
-class ParamError(Exception):
-    """Raise error if subclass parameters don't match defined requirements"""
-    import traceback
-    import os
-
-    message = ''
-
-    def __init__(self, error_no: int, error_msg: str):
-        self.error_no = error_no
-        self.error_msg = error_msg
-        self.pathway = self._get_pathway(self.traceback.extract_stack())
-        self.message = f'From function {self.pathway} \terror {self.error_no}: {self.error_msg}'
-
-    def _get_pathway(self, stack):
-        pathway = f'->{stack[len(stack) - 3][3]}\n\t'
-        for n in range(len(stack) - 3, -1, -1):
-            pathway = f'::{stack[n][2]}(line {stack[n][1]}){pathway}'
-            if stack[n][2] == '<module>' or stack[n][0] != stack[n - 1][0]:
-                pathway = f'\n\t{self.os.path.basename(stack[n][0])}{pathway}'
-            if stack[n][2] == '<module>':
-                break
-        return pathway
+get_structure()
 
 
 @dataclass()
-class BaseEntity:
-    """
-    Maintain a list of entities in a dict keyed by unique reference,
-      and reverse lookup by unique name:
-        Unique integer reference from class variable
-        Unique entity instance name as a string
-        Date range this iteration of instance is active
-        Parent entity instance reference
-        Current attributes as a dict based on class defined available attributes
-        Status defaults to True
-        Archive as a dict of tuples  [(from,to):(name, parent, attributes, status),..]
-          when any details change
-    """
-
-    database: shelve
-    unique_name: str = field(default='')
-    unique_ref: int = field(default=0)
-    from_date: date = START_DATE
-    to_date: date = END_DATE
-    parent_ref: int = field(default=0)
-    attributes: Dict = field(default_factory=dict)
-    status: bool = True
-    archive: Dict = field(default_factory=dict)
-
-    cls_shelf_key: ClassVar[str] = ''
-    cls_next_ref: ClassVar[int] = 0
-    cls_attributes: ClassVar[Dict[str, type]] = {}
-    cls_start_date = START_DATE
-    cls_end_date = END_DATE
-    cls_db: ClassVar[Dict[int, Tuple[str, date, date, int, Dict, bool, Dict]]] = {}
-    cls_dbr: ClassVar[Dict[str, int]] = {}
-
-    def load_data(self):
-        (self.cls_next_ref, self.cls_attributes, self.cls_db, self.cls_dbr) = self.database[self.cls_shelf_key]
-        for k, v in self.cls_attributes.items():
-            self.attributes[k] = {str: '', int: 0, float: 0.0}[v]
-
-    def save_data(self):
-        updated_record = (self.cls_next_ref, self.cls_attributes, self.cls_db, self.cls_dbr)
-        self.database[self.cls_shelf_key] = updated_record
-        self.database.sync()
-
-    def add_instance(self, unique_name: str, from_date: date = START_DATE, to_date: date = END_DATE,
-                     parent_ref: int = 0, **kwargs):
-        if not isinstance(unique_name, str) or not unique_name:
-            raise_param_error(1, f'unique name expected as a string')
-        elif unique_name in self.cls_dbr:
-            return raise_param_error(2, f'unique name already in use "{unique_name}"')
-        elif not isinstance(from_date, date) or from_date < START_DATE:
-            raise_param_error(3, f'invalid "from" date "{from_date}"')
-        elif not isinstance(to_date, date) or to_date < from_date or to_date > END_DATE:
-            raise_param_error(4, f'invalid "to" date "{to_date}"')
-        elif not isinstance(parent_ref, int):
-            raise_param_error(5, f'invalid reference to parent "{parent_ref}"')
-        else:
-            self.cls_next_ref += 1
-            self.unique_ref = self.cls_next_ref
-            self.unique_name = unique_name
-            self.from_date = from_date
-            self.to_date = to_date
-            self.parent_ref = parent_ref
-            self.attributes = {}
-            for k, v in kwargs.items():
-                if k in self.cls_attributes:
-                    if isinstance(v, self.cls_attributes[k]):
-                        self.attributes[k] = v
+class Database:
+    _instantiated: bool = False
+    _exists: bool = False
+    _error_msg: str = ''
+    _table: str = None
+    _sql_results: list = field(default_factory=list)
+    _rows: Dict[int, Dict] = field(default_factory=dict)
+    _names: Dict[str, int] = field(default_factory=dict)
+    _columns: Dict[str, Dict] = field(default_factory=dict)
+    
+    def __post_init__(self):
+        self._table = self.__repr__().split('(')[0].lower()
+        assert self._instantiated, f'{self._table} class should not be directly instantiated'
+        assert self._table in T_STRUCTURE.keys(), f'invalid table {self._table}'
+        self.process('initial')
+    
+    @staticmethod
+    def __get_py(c_name, c_type, c_default) -> Dict:
+        py_values = {'py_type': Any, 'py_default': None}
+        maria_types = [(['text', 'char', 'enum'], {'default': ''}, str),
+                       (['int'], {'key': None, 'default': 0}, int),
+                       (['float', 'decimal', 'double'], {'default': 0.00}, float),
+                       (['date'], {'start_date': START_DATE, 'end_date': END_DATE, 'default': date.today()}, date)]
+        for l in maria_types:
+            if any(x in c_type.lower() for x in l[0]):
+                py_values['py_type'] = l[2]
+                if c_default is None:
+                    py_values['py_default'] = l[1].get(c_name, l[1]['default'])
+                else:
+                    if l[2] is str:
+                        py_values['py_default'] = c_default.strip(' \'"')
+                    elif l[2] is date:
+                        py_values['py_default'] = date.fromisoformat(c_default.strip(' \'"'))
                     else:
-                        raise_param_error(6, f'attribute incorrect type "{k}:{v} - {type(v)}"')
-                else:
-                    raise_param_error(7, f'attribute unknown "{k}:{v} - {type(v)}"')
-            self.status = True
-            self.archive = {}
-            self._update_class_vars(self.unique_ref, self.unique_name, (self.unique_name, self.from_date, self.to_date,
-                                                                        self.parent_ref, self.attributes, self.archive,
-                                                                        True))
-
-    def fetch_instance(self, unique_name: str = '', unique_ref: int = 0):
-        if not unique_name and not unique_ref:
-            raise_param_error(1, f'unique name or reference expected')
-        elif unique_name and unique_ref:
-            raise_param_error(2, f'only one of unique name or reference expected "{unique_name}:{unique_ref}"')
-        elif unique_name and unique_name not in self.cls_dbr:
-            raise_param_error(3, f'unique name not found "{unique_name}"')
-        elif unique_ref and unique_ref not in self.cls_db:
-            raise_param_error(4, f'unique reference not found "{unique_ref}"')
+                        py_values['py_default'] = c_default
+                break
+        return py_values
+    
+    def process(self, action='fetch', **kwargs):
+        assert action in ACTIONS, f'invalid process action requested {action}'
+        is_valid = True
+        if self._validate(action, **kwargs):
+            if action == 'initial':
+                is_valid = self._initial()
+            elif action == 'fetch':
+                is_valid = self._fetch(**kwargs)
+            elif action == 'insert':
+                is_valid = self._insert_instance(**kwargs)
+            elif action == 'update':
+                is_valid = self._update_instance(**kwargs)
+            elif action == 'delete':
+                pass
+        if not is_valid:
+            print(f'\n{self._table} : {action}{self._error_msg}')
+            self._error_msg = ''
+        return is_valid
+    
+    def get_ref(self, name):
+        return self._names.get(name, 0)
+    
+    def get_ancestors(self, ref):
+        return [self._rows[ref].get('grandparent_ref', 0), self._rows[ref].get('parent_ref', 0)]
+    
+    def get_descriptions(self, **kwargs):
+        
+        if 'parent_ref' in kwargs.keys():
+            return [(v['name'], v.get(f'key', '')) for v in self._rows.values() if
+                    v['parent_ref'] == kwargs['parent_ref']]
         else:
-            if unique_name:
-                self.unique_ref = self.cls_dbr[unique_name]
-            else:
-                self.unique_ref = unique_ref
-            (self.unique_name, self.from_date, self.to_date, self.parent_ref,
-             self.attributes, self.status, self.archive) = self.cls_db[self.unique_ref]
-
-    def update_instance(self, new_unique_name: str = '', new_from_date: date = datetime.today(),
-                        new_to_date: date = to_date, new_parent_ref: int = 0, status: bool = None,
-                        **kwargs):
-        new_name = self.unique_name
-        new_attr = self.attributes.copy()
-        new_from = self.from_date
-        new_to = self.to_date
-        new_parent = self.parent_ref
-        new_status = self.status
-
-        if not isinstance(new_unique_name, str):
-            raise_param_error(1, f'new name needs to be a string "{new_unique_name}"')
-        elif not new_unique_name or new_unique_name == self.unique_name:
-            pass
-        elif new_unique_name in self.cls_dbr:
-            raise_param_error(2, f'new name already in use "{new_unique_name}"')
-        else:
-            new_name = new_unique_name
-
-        if (not isinstance(new_from_date, date) or not isinstance(new_to_date, date)
-                or new_from_date < self.from_date or new_from_date > new_to_date):
-            raise_param_error(3, f'incorrect new from or to date "{new_from_date} - {new_to_date}"')
-        else:
-            new_from = new_from_date
-            new_to = new_to_date
-
-        if not isinstance(new_parent_ref, int):
-            raise_param_error(4, f'new parent ref must be an integer "{new_parent_ref}"')
-        elif not new_parent_ref or new_parent_ref == self.parent_ref:
-            pass
-        else:
-            new_parent = new_parent_ref
-
-        for k, v in kwargs.items():
-            if k in self.cls_attributes:
-                if isinstance(v, self.cls_attributes[k]):
-                    new_attr[k] = v
-                else:
-                    raise_param_error(5, f'attribute incorrect type "{k}:{v} - {type(v)}"')
-            else:
-                raise_param_error(6, f'attribute unknown "{k}:{v} - {type(v)}"')
-
-        if status is None:
-            pass
-        elif not isinstance(status, bool):
-            raise_param_error(6, f'status must be "True" or "False" "{status}"')
-        elif not new_parent_ref or new_parent_ref == self.parent_ref:
-            pass
-        else:
-            new_status = status
-
-        if new_name == self.unique_name and new_parent == self.parent_ref and new_attr == self.attributes:
-            raise_param_error(4, f'no changes made')
-        else:
-            self.archive[(self.from_date, new_from - timedelta(days=-1))] = (self.unique_name, self.parent_ref,
-                                                                             self.attributes, self.status)
-            self.unique_name = new_name
-            self.from_date = new_from
-            self.to_date = new_to
-            self.attributes = new_attr
-            self.status = new_status
-
-        self._update_class_vars(self.unique_ref, self.unique_name, (self.unique_name, self.from_date, self.to_date,
-                                                                    self.parent_ref, self.attributes, self.archive,
-                                                                    self.status))
-
-    def deactivate_instance(self, new_from_date: date = datetime.today()):
-
-        if self.status:
-            if (not isinstance(new_from_date, date) or new_from_date < self.from_date):
-                raise_param_error(1, f'incorrect new from date "{new_from_date}"')
-                return False
-            else:
-                self.archive[(self.from_date, new_from_date - timedelta(days=-1))] = (self.unique_name, self.parent_ref,
-                                                                                      self.attributes, True)
-                self.from_date = new_from_date
-                self.to_date = END_DATE
-                self.status = False
-
-                self._update_class_vars(self.unique_ref, self.unique_name,
-                                        (self.unique_name, self.from_date, self.to_date,
-                                         self.parent_ref, self.attributes, self.archive,
-                                         False))
-        else:
-            raise_param_error(2, f'Instance already deactivated "{self.from_date}"')
+            return [(v['name'], v.get(f'key', '')) for v in self._rows.values()]
+    
+    def is_active(self, ref, when: date = date.today()):
+        row = dict(self._rows[ref])
+        if (row.get('start_date', False) and row['start_date'] > when) \
+                or (row.get('end_date', False) and row['end_date'] < when):
             return False
-
-    def _update_class_vars(self, save_ref: int, save_name: str, save_details: Tuple):
-        self.cls_db[save_ref] = save_details
-        self.cls_dbr[save_name] = save_ref
-        self.save_data()
-
-        if TESTING:
-            print(self.cls_next_ref, self.cls_db, self.cls_dbr, sep='\n')
+        else:
+            return True
+    
+    def _initial(self):
+        is_valid = self._execute_sql(self._table, 'initial')
+        if is_valid:
+            self._exists = True
+            self._columns = {v['Field']: {
+                    **dict(v.items()),
+                    **self.__get_py(v['Field'], v['Type'], v['Default'])
+            } for v in self._sql_results}
+        else:
+            self._exists = False
+            self._error_msg += f"\ncould not initialise  {self._table}"
+        return is_valid
+    
+    def _fetch(self, **kwargs):
+        is_valid: bool = self._validate('fetch', **kwargs)
+        if is_valid:
+            sql_builder = self._fetch_sql(**kwargs)
+            is_valid = self._execute_sql(self._table, 'fetch',
+                                         sql_builder['args'], fields=sql_builder['fields'],
+                                         condition=sql_builder['condition'])
+            if is_valid:
+                self._rows = {v[f'key']: v.items() for v in self._sql_results}
+                if 'parent' in (self._columns.keys()):
+                    self._names = {(v['parent'], v[f'name']): v[f'key'] for v in self._sql_results}
+                else:
+                    self._names = {(v[f'name'],): v[f'key'] for v in self._sql_results}
+        if not is_valid:
+            print(f'\nadd name {self._error_msg}')
+            self._error_msg = ''
+        return is_valid
+    
+    def _insert_instance(self, **kwargs):
+        if self._columns.get('start_date') and not kwargs.get('start_date'):
+            kwargs['start_date'] = NOW
+        if self._columns.get('end_date') and not kwargs.get('end_date'):
+            kwargs['end_date'] = END_DATE
+        is_valid: bool = self._validate('insert', **kwargs)
+        if is_valid:
+            sql_builder = self._insert_sql(**kwargs)
+            is_valid = self._execute_sql(self._table, 'insert',
+                                         sql_builder['args'], fields=sql_builder['fields'],
+                                         values=sql_builder['values'])
+            if is_valid:
+                print(f'insert.fetchall {self._sql_results}')
+                if 'parent' in kwargs.keys():
+                    is_valid = self._fetch(name=kwargs['name'], parent=kwargs.get('parent'))
+                else:
+                    is_valid = self._fetch(name=kwargs['name'])
+        if not is_valid:
+            print(f'\ninsert {self._table}{self._error_msg}')
+            self._error_msg = ''
+        return is_valid
+    
+    def _update_instance(self, key=0, parent=0, **kwargs):
+        assert not key or not parent, f'update cannot specify both key and parent {key}, {parent} '
+        is_valid = True
+        if self._validate(action='update', **kwargs):
+            sql_builder = self._update_sql(key=key, parent=parent, **kwargs)
+            if self._execute_sql(self._table, 'update',
+                                 sql_builder['args'], fields=sql_builder['fields'], condition=sql_builder['condition']):
+                if 'end_date' in kwargs.keys():
+                    for v in T_STRUCTURE[self._table][2]:
+                        child_table = self.__dict__[K_STRUCTURE[v][0]]
+                        if not child_table._update_cascade(()):
+                            is_valid = False
+                            print(f'\ncascade {child_table._table}{child_table._error_msg}')
+            else:
+                is_valid = False
+        else:
+            is_valid = False
+        return is_valid
+    
+    def _update_cascade(self, parent, end_date):
+        assert not parent, f'cascade requires parent {parent} '
+        is_valid = True
+        sql_builder = self._update_sql(key=0, parent=parent, end_date=end_date)
+        if self._execute_sql(self._table, 'update',
+                             sql_builder['args'], fields=sql_builder['fields'], condition=sql_builder['condition']):
+            for v in T_STRUCTURE[self._table][2]:
+                this_parent = K_STRUCTURE[v][0]
+                child_table = super.__dict__[this_parent]
+                if not child_table._update_cascade((this_parent, end_date)):
+                    is_valid = False
+                    print(f'\ncascade {child_table._table}{child_table._error_msg}')
+        else:
+            is_valid = False
+        return is_valid
+    
+    def _validate(self, action='', **kwargs):
+        assert action in ACTIONS, f'invalid action parameter "{action}"'
+        is_valid = True
+        unexpected_parm = [k for k in kwargs.keys() if k not in self._columns.keys()
+                           or (k == f'key' and action == 'insert')]
+        date_check = re.compile(r'\d{4}-\d{2}-\d{2}')
+        bad_date = []
+        for k, v in self._columns.items():
+            if v['Type'] == 'date' and k in kwargs.keys():
+                date_val = date_check.match(kwargs.get(k))
+                if date_val:
+                    kwargs[k] = datetime.strptime(date_val.group(0), '%Y-%m-%d').date()
+                else:
+                    bad_date.append(f'{k};{date_val.group(0)}')
+        mistyped_parm = [k for k, v in kwargs.items() if k in self._columns.keys()
+                         and not isinstance(v, self._columns[k]['py_type'])]
+        if unexpected_parm or mistyped_parm or bad_date:
+            self._error_msg += f'\nunexpected parameters: {unexpected_parm}' \
+                               f'\nwrongly typed parameters: {mistyped_parm} ' \
+                               f'\nbad dates: {bad_date}'
+        if kwargs.get('start_date') and kwargs['start_date'] < START_DATE:
+            self._error_msg += f'\nstart date must be >= {START_DATE}: "{kwargs["start_date"]}"'
+        if kwargs.get('end_date') and kwargs['end_date'] > END_DATE:
+            self._error_msg += f'\nend date must be <= {END_DATE}: "{kwargs["end_date"]}"'
+        if (kwargs.get('start_date') and kwargs.get('end_date')
+                and kwargs['start_date'] > kwargs['end_date']):
+            self._error_msg += f'\nstart date must be <= to end date: {kwargs["start_date"]} - {kwargs["end_date"]}'
+        if self._error_msg:
+            is_valid = False
+        if is_valid:
+            if action == 'insert':
+                is_valid = self._validate_insert(**kwargs)
+            elif action == 'fetch':
+                pass
+            elif action == 'update':
+                is_valid = self._validate_update(**kwargs)
+            elif action == 'initial':
+                pass
+            elif action == 'delete':
+                pass
+            else:
+                is_valid = False
+                assert is_valid, f'Action {action} not handled in validation method'
+        return is_valid
+    
+    def _validate_insert(self, **kwargs):
+        is_valid = True
+        missing_parm = [k for k, v in self._columns.items() if k not in kwargs.keys()
+                        and v['Default'] is None and k != f'key']
+        if missing_parm:
+            self._error_msg += f'\nmissing parameters: {missing_parm}'
+            is_valid = False
+        return is_valid
+    
+    def _validate_update(self, reference, **kwargs):
+        is_valid = True
+        if not isinstance(reference, int) or reference < 1 or not self._rows.get(reference):
+            missing_parm = 'Invalid reference'
+        elif len(kwargs) == 1 and f'key' in kwargs.keys():
+            missing_parm = 'No changes found'
+        else:
+            missing_parm = ''
+        if missing_parm:
+            self._error_msg += f'\nmissing parameters: {missing_parm}'
+            is_valid = False
+        return is_valid
+    
+    @staticmethod
+    def _fetch_sql(**kwargs) -> dict:
+        fetch_fields = '*'
+        fetch_conditions = ""
+        fetch_args = ()
+        if len(kwargs):
+            fetch_conditions = 'WHERE '
+            count = len(kwargs) - 1
+            for k, v in kwargs.items():
+                fetch_conditions += f'{k} = %s'
+                fetch_args += (v,)
+                if count:
+                    fetch_conditions += ' AND '
+                    count -= 1
+        return {'args': fetch_args, 'fields': fetch_fields, 'condition': fetch_conditions}
+    
+    def _insert_sql(self, **kwargs) -> dict:
+        insert_fields = ''
+        insert_values = ''
+        insert_args = ()
+        for k, v in self._columns.items():
+            if 'auto' not in v['Extra']:
+                insert_fields += f'{k}, '
+                if k in kwargs.keys():
+                    insert_values += f'%s, '
+                    if isinstance(kwargs[k], str):
+                        insert_args += (f"{kwargs[k]}",)
+                    elif isinstance(kwargs[k], date):
+                        insert_args += (f"{kwargs[k].strftime('%Y-%m-%d')}",)
+                    else:
+                        insert_args += (f"{str(kwargs[k])}",)
+                else:
+                    insert_args += (f"{v['py_default']}",)
+        return {'args': insert_args, 'fields': insert_fields, 'values': insert_values}
+    
+    def _update_sql(self, key=0, parent=0, **kwargs) -> dict:
+        assert not key or not parent, f'update cannot specify both key and parent {key}, {parent} '
+        update_fields = ''
+        update_args = ()
+        for k, v in kwargs.items():
+            assert k in self._columns.keys(), f'invalid field name to update {self._table}, {k}'
+            if v is not None:
+                update_fields += f'{k}=%s, '
+                if isinstance(v, str):
+                    update_args += (f"'{v}'",)
+                elif isinstance(v, date):
+                    update_args += (f"'{v.strftime('%Y-%m-%d')}'",)
+                else:
+                    update_args += (f"'{str(v)}'",)
+        if key:
+            update_condition = 'WHERE key = %s'
+            update_args += (f'{key}',)
+        elif parent:
+            update_condition = 'WHERE parent = %s'
+            update_args += (f'{parent}',)
+        else:
+            update_condition = ''
+        
+        return {'args': update_args, 'fields': update_fields, 'condition': update_condition}
+    
+    def _cascade_sql(self, parent, end_date) -> dict:
+        assert parent, f'cascade must specify parent'
+        update_condition = update_fields = ''
+        update_args = ()
+        if 'end_date' in self._columns.keys():
+            update_fields = f'end_date=%s '
+            update_condition = 'WHERE parent = %s and end_date > %s'
+            update_args += (f"'{end_date.strftime('%Y-%m-%d')}'",)
+            update_args += (f"'{str(parent)}'",)
+            update_args += (f"'{end_date.strftime('%Y-%m-%d')}'",)
+        
+        return {'args': update_args, 'fields': update_fields, 'condition': update_condition}
+    
+    def _execute_sql(self, table, action, *args, condition='', fields='', values=''):
+        assert table in T_STRUCTURE.keys(), f'invalid table parameter "{table}"'
+        assert action in ACTIONS, f'invalid action parameter "{action}"'
+        is_valid = True
+        database = select_db(USE_DB)
+        database.begin()
+        cursor = database.cursor()
+        self._sql_results = []
+        try:
+            cursor.execute('BEGIN')
+            if action == 'initial':
+                result = cursor.execute(f"SHOW columns FROM {table}")
+            elif action == 'fetchall':
+                result = cursor.execute(f"SELECT * FROM {table} ")
+            elif action == 'fetch':
+                result = cursor.execute(f"SELECT * FROM {table} {condition}", args[0])
+            elif action == 'fetchone':
+                result = cursor.execute(f"SELECT * FROM {table} WHERE key = %s", args[0])
+            elif action == 'insert':
+                result = cursor.execute(f"INSERT INTO {table} ({fields.strip(' ,')}) "
+                                        f"VALUES ({values.strip(' ,')})", args[0])
+            elif action == 'update':
+                result = cursor.execute(f"UPDATE {table} SET {fields.strip(' ,')} {condition}", args[0])
+            else:
+                self._error_msg += f'\nunrecognised action "{action}" requested'
+                raise Exception
+            self._sql_results = cursor.fetchall()
+            print(f'{action} on {table}\nresult = {result}\nfetchall = {self._sql_results}')
+            database.commit()
+        except (pymysql.err.InternalError, pymysql.err.IntegrityError) as e:
+            print(f'sql error {e.args}')
+            code, msg = e.args
+            self._error_msg += (f'\nsql error: unable to carry out {action} action on table {table} \n'
+                                f'\t{args} \n'
+                                f'\t{code}, {msg}')
+            is_valid = False
+            database.rollback()
+        except Exception as exc:
+            print(f'general error {exc.args}')
+            self._error_msg += (f'\ngeneral error: unable to carry out {action} action on table {table}  \n'
+                                f'\t{args} \n'
+                                f'\t{str(exc)}')
+            is_valid = False
+            database.rollback()
+        finally:
+            database.close()
+            return is_valid
 
 
 @dataclass()
-class Institutions(BaseEntity):
-    """
-    Maintain a list of institutions with:
-        Unique integer reference from class variable
-        Unique entity instance name as a string
-        Date range this iteration of instance is active
-        Current attributes as a dict based on class defined available attributes
-        Archive as a list of lists  [[name, from, to, attributes],..] when name and/or attributes change
-        Switch indicating if currently active
-        """
-
+class Categories(Database):
     def __post_init__(self):
-        self.cls_shelf_key = 'Institutions'
-        if self.cls_shelf_key in self.database:
-            self.load_data()
-        else:
-            self.cls_attributes = {'address': str, 'phone': str}
-            for k, v in self.cls_attributes.items():
-                self.attributes[k] = {str: '', int: 0, float: 0.0}[v]
-            self.cls_start_date = START_DATE
-            self.cls_end_date = END_DATE
-            self.cls_db = {}
-            self.cls_dbr = {}
-            self.save_data()
+        self._instantiated = True
+        super().__post_init__()
+    
+    def fetch(self):
+        self._fetch()
+        return [dict(v)['name'] for v in self._rows.values()]
 
 
 @dataclass()
-class Accounts(BaseEntity):
-    """
-    Maintain a list of accounts with:
-        Unique integer reference from class variable
-        Unique entity instance name as a string
-        Date range this iteration of instance is active
-        Institution reference
-        Current attributes as a dict based on class defined available attributes
-        Archive as a list of lists  [[name, from, to, attributes],..] when name and/or attributes change
-        Switch indicating if currently active
-    """
-
+class SubCategories(Database):
     def __post_init__(self):
-        self.cls_shelf_key = 'Accounts'
-        if self.cls_shelf_key in self.database:
-            self.load_data()
-        else:
-            self.cls_attributes = {'institution_ref': int, 'rounding': int,
-                                   'nickname': str, 'account_type': str, 'sort_code': str, 'account_no': str,
-                                   'card_no': str, 'initial': float, 'current': float,
-                                   'credit%': float, 'debit%': float, 'min_pay%': float, 'min_pay_amt': float}
-            self.cls_start_date = START_DATE
-            self.cls_end_date = END_DATE
-            self.cls_db = {}
-            self.cls_dbr = {}
-            self.save_data()
+        self._instantiated = True
+        super().__post_init__()
 
 
 @dataclass()
-class Transactions(BaseEntity):
-    """
-    Define transaction details as a tuple containing
-        unique ref as int,
-        account ref as int,
-        date as str,
-        amount as float,
-        description as str
-        CRDR as str
-        type as str
-        comment as str
-        void  as bin
-    """
-
+class Details(Database):
     def __post_init__(self):
-        self.cls_shelf_key = 'Transactions'
-        if self.cls_shelf_key in self.database:
-            self.load_data()
-        else:
-            self.cls_attributes = {'account_ref': int,
-                                   'bank_desc': str, 'trans_type': str, 'comment': str,
-                                   'credit': float, 'debit': float}
-            self.cls_start_date = START_DATE
-            self.cls_end_date = END_DATE
-            self.cls_db = {}
-            self.cls_dbr = {}
-            self.save_data()
+        self._instantiated = True
+        super().__post_init__()
+
+
+@dataclass()
+class Companies(Database):
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
+
+
+@dataclass()
+class Accounts(Database):
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
+
+
+@dataclass()
+class Transactions(Database):
+    
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
+
+
+@dataclass()
+class Rules(Database):
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
+
+
+@dataclass()
+class Cards(Database):
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
+
+
+@dataclass()
+class Contacts(Database):
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
