@@ -14,7 +14,7 @@ K_STRUCTURE: Dict = {}
 ACTIONS = ('initial', 'fetch', 'insert', 'update', 'delete')
 
 
-def get_structure():
+def __get_structure():
     d = select_db(USE_DB)
     c1 = d.cursor()
     c1.execute('select * from structure')
@@ -33,7 +33,7 @@ def get_structure():
         K_STRUCTURE[row['key']] = (row['table'], row['parent'], child.get(row['key'], ()), row['table'].title())
 
 
-get_structure()
+__get_structure()
 
 
 @dataclass()
