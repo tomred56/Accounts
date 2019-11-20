@@ -9,9 +9,9 @@ from connect_db import select_db
 from statics import *
 
 NOW: date = date(date.today().year, date.today().month, date.today().day)
-T_STRUCTURE: Dict = {}
-K_STRUCTURE: Dict = {}
-ACTIONS = ('initial', 'fetch', 'insert', 'update', 'delete')
+_T_STRUCTURE: Dict = {}
+_K_STRUCTURE: Dict = {}
+_ACTIONS = ('initial', 'fetch', 'insert', 'update', 'delete')
 
 
 def __get_structure():
@@ -29,8 +29,8 @@ def __get_structure():
                 child[row['parent']] = ()
                 child[row['parent']] += (row['key'],)
     for row in rows:
-        T_STRUCTURE[row['table']] = (row['key'], row['parent'], child.get(row['key'], ()), row['table'].title())
-        K_STRUCTURE[row['key']] = (row['table'], row['parent'], child.get(row['key'], ()), row['table'].title())
+        _T_STRUCTURE[row['table']] = (row['key'], row['parent'], child.get(row['key'], ()), row['table'].title())
+        _K_STRUCTURE[row['key']] = (row['table'], row['parent'], child.get(row['key'], ()), row['table'].title())
 
 
 __get_structure()
@@ -44,13 +44,13 @@ class Database:
     _table: str = None
     _sql_results: list = field(default_factory=list)
     _rows: Dict[int, Dict] = field(default_factory=dict)
-    _names: Dict[str, int] = field(default_factory=dict)
+    records: Dict[str, int] = field(default_factory=dict)
     _columns: Dict[str, Dict] = field(default_factory=dict)
     
     def __post_init__(self):
         self._table = self.__repr__().split('(')[0].lower()
         assert self._instantiated, f'{self._table} class should not be directly instantiated'
-        assert self._table in T_STRUCTURE.keys(), f'invalid table {self._table}'
+        assert self._table in _T_STRUCTURE.keys(), f'invalid table {self._table}'
         self.process('initial')
     
     @staticmethod
@@ -76,7 +76,7 @@ class Database:
         return py_values
     
     def process(self, action='fetch', **kwargs):
-        assert action in ACTIONS, f'invalid process action requested {action}'
+        assert action in _ACTIONS, f'invalid process action requested {action}'
         is_valid = True
         if self._validate(action, **kwargs):
             if action == 'initial':
@@ -95,7 +95,7 @@ class Database:
         return is_valid
     
     def get_ref(self, name):
-        return self._names.get(name, 0)
+        return self.records.get(name, 0)
     
     def get_ancestors(self, ref):
         return [self._rows[ref].get('grandparent_ref', 0), self._rows[ref].get('parent_ref', 0)]
@@ -139,11 +139,11 @@ class Database:
             if is_valid:
                 self._rows = {v[f'key']: v.items() for v in self._sql_results}
                 if 'parent' in (self._columns.keys()):
-                    self._names = {(v['parent'], v[f'name']): v[f'key'] for v in self._sql_results}
+                    self.records = {(v['parent'], v[f'name']): v[f'key'] for v in self._sql_results}
                 else:
-                    self._names = {(v[f'name'],): v[f'key'] for v in self._sql_results}
+                    self.records = {(v[f'name'],): v[f'key'] for v in self._sql_results}
         if not is_valid:
-            print(f'\nadd name {self._error_msg}')
+            print(f'\nfetch {self._error_msg}')
             self._error_msg = ''
         return is_valid
     
@@ -177,8 +177,8 @@ class Database:
             if self._execute_sql(self._table, 'update',
                                  sql_builder['args'], fields=sql_builder['fields'], condition=sql_builder['condition']):
                 if 'end_date' in kwargs.keys():
-                    for v in T_STRUCTURE[self._table][2]:
-                        child_table = self.__dict__[K_STRUCTURE[v][0]]
+                    for v in _T_STRUCTURE[self._table][2]:
+                        child_table = self.__dict__[_K_STRUCTURE[v][0]]
                         if not child_table._update_cascade(()):
                             is_valid = False
                             print(f'\ncascade {child_table._table}{child_table._error_msg}')
@@ -194,8 +194,8 @@ class Database:
         sql_builder = self._update_sql(key=0, parent=parent, end_date=end_date)
         if self._execute_sql(self._table, 'update',
                              sql_builder['args'], fields=sql_builder['fields'], condition=sql_builder['condition']):
-            for v in T_STRUCTURE[self._table][2]:
-                this_parent = K_STRUCTURE[v][0]
+            for v in _T_STRUCTURE[self._table][2]:
+                this_parent = _K_STRUCTURE[v][0]
                 child_table = super.__dict__[this_parent]
                 if not child_table._update_cascade((this_parent, end_date)):
                     is_valid = False
@@ -205,7 +205,7 @@ class Database:
         return is_valid
     
     def _validate(self, action='', **kwargs):
-        assert action in ACTIONS, f'invalid action parameter "{action}"'
+        assert action in _ACTIONS, f'invalid action parameter "{action}"'
         is_valid = True
         unexpected_parm = [k for k in kwargs.keys() if k not in self._columns.keys()
                            or (k == f'key' and action == 'insert')]
@@ -345,8 +345,8 @@ class Database:
         return {'args': update_args, 'fields': update_fields, 'condition': update_condition}
     
     def _execute_sql(self, table, action, *args, condition='', fields='', values=''):
-        assert table in T_STRUCTURE.keys(), f'invalid table parameter "{table}"'
-        assert action in ACTIONS, f'invalid action parameter "{action}"'
+        assert table in _T_STRUCTURE.keys(), f'invalid table parameter "{table}"'
+        assert action in _ACTIONS, f'invalid action parameter "{action}"'
         is_valid = True
         database = select_db(USE_DB)
         database.begin()
@@ -431,6 +431,8 @@ class Accounts(Database):
         self._instantiated = True
         super().__post_init__()
 
+    def fetch_types(self):
+        return re.findall("\'(.*?)\'", f"{self._columns['account_type']['Type']}")
 
 @dataclass()
 class Transactions(Database):

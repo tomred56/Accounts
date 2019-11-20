@@ -48,7 +48,7 @@ class MyTestCase(unittest.TestCase):
         self.details = db.Details()
         self.assertTrue(self.details._exists)
         self.assertFalse(self.details._error)
-        self.assertGreaterEqual(len(self.details._names), 0, msg=self.details._names.keys())
+        self.assertGreaterEqual(len(self.details.records), 0, msg=self.details.records.keys())
     
     def test_companies(self):
         self.companies = db.Companies()

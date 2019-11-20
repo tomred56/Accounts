@@ -5,16 +5,16 @@ import wx.lib.stattext
 
 expand_option = dict(flag=wx.EXPAND)
 no_options = dict()
-empty_space = ((0, 0), no_options)
+empty_space = ((0, 0), expand_option)
 
 
 class BaseWindow(wx.Frame):
     
-    def __init__(self, *args, **kw):
+    def __init__(self, data, *args, **kw):
         
         super().__init__(*args, **kw)
         self.Bind(wx.EVT_CHAR_HOOK, self.on_key_pressed_somewhere)
-        
+        self.data = data
         self.toolbar = self.CreateToolBar(wx.TB_VERTICAL | wx.TB_TEXT)
         self.make_toolbar()
         self.toolbar.Realize()
@@ -73,23 +73,31 @@ class MakeSummary(wx.Panel):
     
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self.grid = wx.GridSizer(rows=5, cols=4, vgap=10, hgap=10)
-        self.label1 = wx.StaticText(self, -1, 'Income')
-        self.label2 = wx.StaticText(self, -1, 'Loans')
-        self.label3 = wx.StaticText(self, -1, 'Expenditure')
-        self.label4 = wx.StaticText(self, -1, 'Savings')
-        self.label5 = wx.StaticText(self, -1, 'Balance')
-        for control, options in \
-                [
-                        (self.label1, expand_option), empty_space, empty_space, empty_space,
-                        empty_space, empty_space, (self.label2, expand_option), empty_space,
-                        (self.label3, expand_option), empty_space, empty_space, empty_space,
-                        empty_space, empty_space, (self.label4, expand_option), empty_space,
-                        (self.label5, expand_option), empty_space, empty_space, empty_space
-                ]:
-            self.grid.Add(control, **options)
+        self.grid = wx.GridSizer(cols=6, vgap=10, hgap=20)
+        values = self.get_values(args[0].data)
+        layout = []
+        for k, v in values.items():
+            layout.append((wx.StaticText(self, -1, k), wx.EXPAND))
+            layout.append((wx.TextCtrl(self, value=f'{v}', style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
+        self.grid.AddMany(layout)
         self.SetSizerAndFit(self.grid)
 
+    def get_values(self, data):
+    
+        a_data = data['accounts']
+        t_data = data['transactions']
+        values = {}
+        a_types = a_data.fetch_types()
+        if a_data.process('fetch'):
+            if t_data.process('fetch'):
+                values['Income'] = sum(v['amount'] for v in t_data.records if v['amount'] > 0)
+                values['Expenditure'] = sum(v['amount'] for v in t_data.records if v['amount'] < 0)
+                values['Balance'] = sum(v['amount'] for v in t_data.records)
+                for a_type in a_types:
+                    values[a_type] = sum(v['amount'] for v in t_data.records
+                                         if a_data.records[v['parent']]['account_type'] == a_type)
+        return values
+        
 
 class MakeGrid(wx.Panel):
     def __init__(self, *args, **kw):
@@ -165,8 +173,20 @@ class MyCalendar(wx.Frame):
 
 
 def main():
+    import data_structures as db
+    data = {
+            'categories': db.Categories(),
+            'sub_categories': db.SubCategories(),
+            'details': db.Details(),
+            'companies': db.Companies(),
+            'accounts': db.Accounts(),
+            'transactions': db.Transactions(),
+            'rules': db.Rules(),
+            'cards': db.Cards(),
+            'contacts': db.Contacts()
+    }
     app = wx.App()
-    mainframe = BaseWindow(None)
+    mainframe = BaseWindow(data, parent=None)
     mainframe.Show()
     
     app.MainLoop()
