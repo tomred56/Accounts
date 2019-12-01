@@ -8,14 +8,13 @@ import pymysql.cursors
 from connect_db import select_db
 from statics import *
 
-NOW: date = date(date.today().year, date.today().month, date.today().day)
 _T_STRUCTURE: Dict = {}
 _K_STRUCTURE: Dict = {}
-_ACTIONS = ('initial', 'fetch', 'insert', 'update', 'delete')
+_ACTIONS: tuple = ('initial', 'count', 'fetch', 'insert', 'update', 'delete')
 
 
 def __get_structure():
-    d = select_db(USE_DB)
+    d = select_db()
     c1 = d.cursor()
     c1.execute('select * from structure')
     rows = c1.fetchall()
@@ -41,17 +40,20 @@ class Database:
     _instantiated: bool = False
     _exists: bool = False
     _error_msg: str = ''
-    _table: str = None
+    table_name: str = None
     _sql_results: list = field(default_factory=list)
-    _rows: Dict[int, Dict] = field(default_factory=dict)
+    rows: Dict[int, Dict] = field(default_factory=dict)
     records: Dict[str, int] = field(default_factory=dict)
+    rowcount: int = 0
+    sel_rowcount: int = 0
     _columns: Dict[str, Dict] = field(default_factory=dict)
-    
+    columns: list = field(default_factory=list)
+    colcount: int = 0
     def __post_init__(self):
-        self._table = self.__repr__().split('(')[0].lower()
-        assert self._instantiated, f'{self._table} class should not be directly instantiated'
-        assert self._table in _T_STRUCTURE.keys(), f'invalid table {self._table}'
-        self.process('initial')
+        self.table_name = self.__repr__().split('(')[0].lower()
+        assert self._instantiated, f'{self.table_name} class should not be directly instantiated'
+        assert self.table_name in _T_STRUCTURE.keys(), f'invalid table {self.table_name}'
+        self._initial()
     
     @staticmethod
     def __get_py(c_name, c_type, c_default) -> Dict:
@@ -79,9 +81,7 @@ class Database:
         assert action in _ACTIONS, f'invalid process action requested {action}'
         is_valid = True
         if self._validate(action, **kwargs):
-            if action == 'initial':
-                is_valid = self._initial()
-            elif action == 'fetch':
+            if action == 'fetch':
                 is_valid = self._fetch(**kwargs)
             elif action == 'insert':
                 is_valid = self._insert_instance(**kwargs)
@@ -90,58 +90,69 @@ class Database:
             elif action == 'delete':
                 pass
         if not is_valid:
-            print(f'\n{self._table} : {action}{self._error_msg}')
+            print(f'\n{self.table_name} : {action}{self._error_msg}')
             self._error_msg = ''
         return is_valid
-    
+
+    def fetch(self, **kwargs):
+        self._fetch(**kwargs)
+        return [dict(v)['name'] for v in self.rows.values()]
+
     def get_ref(self, name):
         return self.records.get(name, 0)
-    
+
     def get_ancestors(self, ref):
-        return [self._rows[ref].get('grandparent_ref', 0), self._rows[ref].get('parent_ref', 0)]
+        return [self.rows[ref].get('parent', 0), self.rows[ref].get('grandparent', 0)]
     
     def get_descriptions(self, **kwargs):
         
         if 'parent_ref' in kwargs.keys():
-            return [(v['name'], v.get(f'key', '')) for v in self._rows.values() if
+            return [(v['name'], v.get(f'key', '')) for v in self.rows.values() if
                     v['parent_ref'] == kwargs['parent_ref']]
         else:
-            return [(v['name'], v.get(f'key', '')) for v in self._rows.values()]
+            return [(v['name'], v.get(f'key', '')) for v in self.rows.values()]
     
     def is_active(self, ref, when: date = date.today()):
-        row = dict(self._rows[ref])
+        row = dict(self.rows[ref])
         if (row.get('start_date', False) and row['start_date'] > when) \
                 or (row.get('end_date', False) and row['end_date'] < when):
             return False
         else:
             return True
-    
+
     def _initial(self):
-        is_valid = self._execute_sql(self._table, 'initial')
+        is_valid = self._execute_sql(self.table_name, 'initial')
         if is_valid:
             self._exists = True
             self._columns = {v['Field']: {
                     **dict(v.items()),
                     **self.__get_py(v['Field'], v['Type'], v['Default'])
             } for v in self._sql_results}
+            self.columns = [(k, v['py_type']) for k, v in self._columns.items()]
+            self.colcount = len(self.columns)
+            self._count()
         else:
             self._exists = False
-            self._error_msg += f"\ncould not initialise  {self._table}"
+            self._error_msg += f"\ncould not initialise  {self.table_name}"
         return is_valid
-    
+
+    def _count(self):
+        is_valid: bool = self._execute_sql(self.table_name, 'count')
+        return is_valid
+
     def _fetch(self, **kwargs):
         is_valid: bool = self._validate('fetch', **kwargs)
         if is_valid:
             sql_builder = self._fetch_sql(**kwargs)
-            is_valid = self._execute_sql(self._table, 'fetch',
+            is_valid = self._execute_sql(self.table_name, 'fetch',
                                          sql_builder['args'], fields=sql_builder['fields'],
                                          condition=sql_builder['condition'])
             if is_valid:
-                self._rows = {v[f'key']: v.items() for v in self._sql_results}
+                self.rows = {v[f'key']: v.items() for v in self._sql_results}
                 if 'parent' in (self._columns.keys()):
                     self.records = {(v['parent'], v[f'name']): v[f'key'] for v in self._sql_results}
                 else:
-                    self.records = {(v[f'name'],): v[f'key'] for v in self._sql_results}
+                    self.records = {(0, v[f'name']): v[f'key'] for v in self._sql_results}
         if not is_valid:
             print(f'\nfetch {self._error_msg}')
             self._error_msg = ''
@@ -155,7 +166,7 @@ class Database:
         is_valid: bool = self._validate('insert', **kwargs)
         if is_valid:
             sql_builder = self._insert_sql(**kwargs)
-            is_valid = self._execute_sql(self._table, 'insert',
+            is_valid = self._execute_sql(self.table_name, 'insert',
                                          sql_builder['args'], fields=sql_builder['fields'],
                                          values=sql_builder['values'])
             if is_valid:
@@ -164,8 +175,9 @@ class Database:
                     is_valid = self._fetch(name=kwargs['name'], parent=kwargs.get('parent'))
                 else:
                     is_valid = self._fetch(name=kwargs['name'])
+                self._count()
         if not is_valid:
-            print(f'\ninsert {self._table}{self._error_msg}')
+            print(f'\ninsert {self.table_name}{self._error_msg}')
             self._error_msg = ''
         return is_valid
     
@@ -174,10 +186,10 @@ class Database:
         is_valid = True
         if self._validate(action='update', **kwargs):
             sql_builder = self._update_sql(key=key, parent=parent, **kwargs)
-            if self._execute_sql(self._table, 'update',
+            if self._execute_sql(self.table_name, 'update',
                                  sql_builder['args'], fields=sql_builder['fields'], condition=sql_builder['condition']):
                 if 'end_date' in kwargs.keys():
-                    for v in _T_STRUCTURE[self._table][2]:
+                    for v in _T_STRUCTURE[self.table_name][2]:
                         child_table = self.__dict__[_K_STRUCTURE[v][0]]
                         if not child_table._update_cascade(()):
                             is_valid = False
@@ -192,9 +204,9 @@ class Database:
         assert not parent, f'cascade requires parent {parent} '
         is_valid = True
         sql_builder = self._update_sql(key=0, parent=parent, end_date=end_date)
-        if self._execute_sql(self._table, 'update',
+        if self._execute_sql(self.table_name, 'update',
                              sql_builder['args'], fields=sql_builder['fields'], condition=sql_builder['condition']):
-            for v in _T_STRUCTURE[self._table][2]:
+            for v in _T_STRUCTURE[self.table_name][2]:
                 this_parent = _K_STRUCTURE[v][0]
                 child_table = super.__dict__[this_parent]
                 if not child_table._update_cascade((this_parent, end_date)):
@@ -242,11 +254,13 @@ class Database:
                 is_valid = self._validate_update(**kwargs)
             elif action == 'initial':
                 pass
+            elif action == 'count':
+                pass
             elif action == 'delete':
                 pass
             else:
                 is_valid = False
-                assert is_valid, f'Action {action} not handled in validation method'
+                assert is_valid, f'Action "{action}" not handled in validation method'
         return is_valid
     
     def _validate_insert(self, **kwargs):
@@ -260,7 +274,7 @@ class Database:
     
     def _validate_update(self, reference, **kwargs):
         is_valid = True
-        if not isinstance(reference, int) or reference < 1 or not self._rows.get(reference):
+        if not isinstance(reference, int) or reference < 1 or not self.rows.get(reference):
             missing_parm = 'Invalid reference'
         elif len(kwargs) == 1 and f'key' in kwargs.keys():
             missing_parm = 'No changes found'
@@ -280,7 +294,7 @@ class Database:
             fetch_conditions = 'WHERE '
             count = len(kwargs) - 1
             for k, v in kwargs.items():
-                fetch_conditions += f'{k} = %s'
+                fetch_conditions += f"`{k}` = %s"
                 fetch_args += (v,)
                 if count:
                     fetch_conditions += ' AND '
@@ -293,7 +307,7 @@ class Database:
         insert_args = ()
         for k, v in self._columns.items():
             if 'auto' not in v['Extra']:
-                insert_fields += f'{k}, '
+                insert_fields += f"`{k}`, "
                 if k in kwargs.keys():
                     insert_values += f'%s, '
                     if isinstance(kwargs[k], str):
@@ -311,9 +325,9 @@ class Database:
         update_fields = ''
         update_args = ()
         for k, v in kwargs.items():
-            assert k in self._columns.keys(), f'invalid field name to update {self._table}, {k}'
+            assert k in self._columns.keys(), f'invalid field name to update {self.table_name}, {k}'
             if v is not None:
-                update_fields += f'{k}=%s, '
+                update_fields += f"`{k}`=%s, "
                 if isinstance(v, str):
                     update_args += (f"'{v}'",)
                 elif isinstance(v, date):
@@ -321,10 +335,10 @@ class Database:
                 else:
                     update_args += (f"'{str(v)}'",)
         if key:
-            update_condition = 'WHERE key = %s'
+            update_condition = "WHERE `key` = %s"
             update_args += (f'{key}',)
         elif parent:
-            update_condition = 'WHERE parent = %s'
+            update_condition = "WHERE `parent` = %s"
             update_args += (f'{parent}',)
         else:
             update_condition = ''
@@ -336,8 +350,8 @@ class Database:
         update_condition = update_fields = ''
         update_args = ()
         if 'end_date' in self._columns.keys():
-            update_fields = f'end_date=%s '
-            update_condition = 'WHERE parent = %s and end_date > %s'
+            update_fields = f"`end_date`=%s "
+            update_condition = "WHERE `parent` = %s and `end_date` > %s"
             update_args += (f"'{end_date.strftime('%Y-%m-%d')}'",)
             update_args += (f"'{str(parent)}'",)
             update_args += (f"'{end_date.strftime('%Y-%m-%d')}'",)
@@ -348,7 +362,8 @@ class Database:
         assert table in _T_STRUCTURE.keys(), f'invalid table parameter "{table}"'
         assert action in _ACTIONS, f'invalid action parameter "{action}"'
         is_valid = True
-        database = select_db(USE_DB)
+        result = 0
+        database = select_db()
         database.begin()
         cursor = database.cursor()
         self._sql_results = []
@@ -356,6 +371,8 @@ class Database:
             cursor.execute('BEGIN')
             if action == 'initial':
                 result = cursor.execute(f"SHOW columns FROM {table}")
+            elif action == 'count':
+                result = cursor.execute(f"SELECT COUNT(`key`) AS rowcount FROM {table}")
             elif action == 'fetchall':
                 result = cursor.execute(f"SELECT * FROM {table} ")
             elif action == 'fetch':
@@ -370,10 +387,8 @@ class Database:
             else:
                 self._error_msg += f'\nunrecognised action "{action}" requested'
                 raise Exception
-            self._sql_results = cursor.fetchall()
-            print(f'{action} on {table}\nresult = {result}\nfetchall = {self._sql_results}')
             database.commit()
-        except (pymysql.err.InternalError, pymysql.err.IntegrityError) as e:
+        except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
             print(f'sql error {e.args}')
             code, msg = e.args
             self._error_msg += (f'\nsql error: unable to carry out {action} action on table {table} \n'
@@ -389,6 +404,13 @@ class Database:
             is_valid = False
             database.rollback()
         finally:
+            if action == 'count':
+                self.rowcount = cursor.fetchall()[0]['rowcount']
+            else:
+                if 'fetch' in action:
+                    self.sel_rowcount = result
+                self._sql_results = cursor.fetchall()
+            print(f'{action} on {table}\nresult = {result}\nfetchall = {self._sql_results}')
             database.close()
             return is_valid
 
@@ -399,10 +421,6 @@ class Categories(Database):
         self._instantiated = True
         super().__post_init__()
     
-    def fetch(self):
-        self._fetch()
-        return [dict(v)['name'] for v in self._rows.values()]
-
 
 @dataclass()
 class SubCategories(Database):
@@ -419,7 +437,7 @@ class Details(Database):
 
 
 @dataclass()
-class Companies(Database):
+class Suppliers(Database):
     def __post_init__(self):
         self._instantiated = True
         super().__post_init__()
@@ -432,7 +450,16 @@ class Accounts(Database):
         super().__post_init__()
 
     def fetch_types(self):
-        return re.findall("\'(.*?)\'", f"{self._columns['account_type']['Type']}")
+        return re.findall("\'(.*?)\'", f"{self._columns['type']['Type']}")
+
+
+@dataclass()
+class SubAccounts(Database):
+    
+    def __post_init__(self):
+        self._instantiated = True
+        super().__post_init__()
+
 
 @dataclass()
 class Transactions(Database):

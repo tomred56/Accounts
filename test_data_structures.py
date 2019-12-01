@@ -36,7 +36,7 @@ class MyTestCase(unittest.TestCase):
         a = db.Categories()
         b = db.SubCategories()
         self.assertTrue(b._exists)
-        for k, v in a._rows.items():
+        for k, v in a.rows.items():
             nv = dict(v)
             self.subcategories = db.SubCategories()
             self.assertTrue(self.subcategories._exists)
@@ -91,61 +91,61 @@ if __name__ == '__main__':
     if not categories._exists:
         print('Error reading categories')
     else:
-        print(f'number of Categories is {len(categories._rows)}')
+        print(f'number of Categories is {len(categories.rows)}')
         categories.new_instance(category=f'test{uuid.uuid4()}'[:-8], category_sort='96',
                                 start_date=date.fromisoformat('2019-02-01'))
         categories.new_instance(category=f'test4', category_sort=f'{uuid.uuid4()}'[-4:],
                                 end_date=date.fromisoformat('2049-12-31'))
         categories.new_instance(category=f'test{uuid.uuid4()}'[:-8], category_sort=f'{uuid.uuid4()}'[-4:],
                                 start_date=date.today(), end_date=END_DATE)
-        print(f'number of Categories is {len(categories._rows)}')
+        print(f'number of Categories is {len(categories.rows)}')
         cycle = 0
-        for k1, v1 in categories._rows.items():
+        for k1, v1 in categories.rows.items():
             if cycle == 0:
                 cycle = 1
-                sub_categories = TableSubCategories()
-                print(f'number of SubCategories in blank is {len(sub_categories._rows)}')
-                sub_categories = TableSubCategories(parent_ref=-1)
-                print(f'number of SubCategories in -1 is {len(sub_categories._rows)}')
-                sub_categories = TableSubCategories(parent_ref=0)
-                print(f'number of SubCategories in 0 is {len(sub_categories._rows)}')
-            sub_categories = TableSubCategories(parent_ref=k1)
-            if not sub_categories._exists:
+                subcategories = TableSubCategories()
+                print(f'number of SubCategories in blank is {len(subcategories.rows)}')
+                subcategories = TableSubCategories(parent_ref=-1)
+                print(f'number of SubCategories in -1 is {len(subcategories.rows)}')
+                subcategories = TableSubCategories(parent_ref=0)
+                print(f'number of SubCategories in 0 is {len(subcategories.rows)}')
+            subcategories = TableSubCategories(parent_ref=k1)
+            if not subcategories._exists:
                 print('Error reading sub-categories')
             else:
-                print(f'number of SubCategories in {k1} is {len(sub_categories._rows)}')
+                print(f'number of SubCategories in {k1} is {len(subcategories.rows)}')
                 if cycle == 2:
-                    sub_categories.new_instance(category=f'test{uuid.uuid4()}'[:-8], category_sort='96',
+                    subcategories.new_instance(category=f'test{uuid.uuid4()}'[:-8], category_sort='96',
                                                 start_date=date.fromisoformat('2019-02-01'))
-                    sub_categories.new_instance(category=f'test4', category_sort=f'{uuid.uuid4()}'[-4:],
+                    subcategories.new_instance(category=f'test4', category_sort=f'{uuid.uuid4()}'[-4:],
                                                 end_date=date.fromisoformat('2049-12-31'))
-                    sub_categories.new_instance(category=f'test{uuid.uuid4()}'[:-8],
+                    subcategories.new_instance(category=f'test{uuid.uuid4()}'[:-8],
                                                 category_sort=f'{uuid.uuid4()}'[-4:],
                                                 start_date=date.today(), end_date=END_DATE)
-                    print(f'number of SubCategories in {k1} is {len(sub_categories._rows)}')
+                    print(f'number of SubCategories in {k1} is {len(subcategories.rows)}')
                 cycle1 = 0
-                for k2, v2 in sub_categories._rows.items():
+                for k2, v2 in subcategories.rows.items():
                     if cycle1 == 0:
                         cycle1 = 1
                         details = TableDetails()
-                        print(f'number of Details is {len(details._rows)}')
+                        print(f'number of Details is {len(details.rows)}')
                         details = TableDetails(parent_ref=-2, grandparent_ref=-2)
-                        print(f'number of Details in -2,-2 is {len(details._rows)}')
+                        print(f'number of Details in -2,-2 is {len(details.rows)}')
                         details = TableDetails(parent_ref=-1, grandparent_ref=k1)
-                        print(f'number of Details in -1,{k1} is {len(details._rows)}')
+                        print(f'number of Details in -1,{k1} is {len(details.rows)}')
                         details = TableDetails(parent_ref=0, grandparent_ref=k1)
-                        print(f'number of Details in 0,{k1} is {len(details._rows)}')
+                        print(f'number of Details in 0,{k1} is {len(details.rows)}')
                         details = TableDetails(parent_ref=k2, grandparent_ref=0)
-                        print(f'number of Details in {k2},0 is {len(details._rows)}')
+                        print(f'number of Details in {k2},0 is {len(details.rows)}')
                         details = TableDetails(parent_ref=k2, grandparent_ref=-1)
-                        print(f'number of Details in {k2},-1 is {len(details._rows)}')
+                        print(f'number of Details in {k2},-1 is {len(details.rows)}')
                         details = TableDetails(parent_ref=-1, grandparent_ref=-1)
-                        print(f'number of Details in -1,-1 is {len(details._rows)}')
+                        print(f'number of Details in -1,-1 is {len(details.rows)}')
                     details = TableDetails(parent_ref=k2, grandparent_ref=k1)
                     if not details._exists:
                         print('Error reading details')
                     else:
-                        print(f'number of Details in {k1},{k2} is {len(details._rows)}')
+                        print(f'number of Details in {k1},{k2} is {len(details.rows)}')
                         if cycle1 == 1:
                             cycle1 = 2
                             details.new_instance(category=f'test{uuid.uuid4()}'[:-8], category_sort='96',
@@ -155,35 +155,35 @@ if __name__ == '__main__':
                             details.new_instance(category=f'test{uuid.uuid4()}'[:-8],
                                                  category_sort=f'{uuid.uuid4()}'[-4:],
                                                  start_date=date.today(), end_date=END_DATE)
-                            print(f'number of Details in {k1},{k2} is {len(details._rows)}')
+                            print(f'number of Details in {k1},{k2} is {len(details.rows)}')
 
-    companies = TableCompanies()
-    if not companies._exists:
-        print('Error reading companies')
+    suppliers = TableCompanies()
+    if not suppliers._exists:
+        print('Error reading suppliers')
     else:
-        print(f'number of companies is {len(companies._rows)}')
-        companies.new_instance(companies=f'test{uuid.uuid4()}'[:-8], category_sort='96',
+        print(f'number of suppliers is {len(suppliers.rows)}')
+        suppliers.new_instance(suppliers=f'test{uuid.uuid4()}'[:-8], category_sort='96',
                                start_date=date.fromisoformat('2019-02-01'))
-        companies.new_instance(companies=f'test4', category_sort=f'{uuid.uuid4()}'[-4:],
+        suppliers.new_instance(suppliers=f'test4', category_sort=f'{uuid.uuid4()}'[-4:],
                                end_date=date.fromisoformat('2049-12-31'))
-        companies.new_instance(companies=f'test{uuid.uuid4()}'[:-8], category_sort=f'{uuid.uuid4()}'[-4:],
+        suppliers.new_instance(suppliers=f'test{uuid.uuid4()}'[:-8], category_sort=f'{uuid.uuid4()}'[-4:],
                                start_date=date.today(), end_date=END_DATE)
-        print(f'number of companies is {len(companies._rows)}')
+        print(f'number of suppliers is {len(suppliers.rows)}')
         cycle = 0
-        for k1, v1 in companies._rows.items():
+        for k1, v1 in suppliers.rows.items():
             if cycle == 0:
                 cycle = 1
                 accounts = TableAccounts()
-                print(f'number of accounts in blank is {len(accounts._rows)}')
+                print(f'number of accounts in blank is {len(accounts.rows)}')
                 accounts = TableAccounts(parent_ref=-1)
-                print(f'number of accounts in -1 is {len(accounts._rows)}')
+                print(f'number of accounts in -1 is {len(accounts.rows)}')
                 accounts = TableAccounts(parent_ref=0)
-                print(f'number of accounts in 0 is {len(accounts._rows)}')
+                print(f'number of accounts in 0 is {len(accounts.rows)}')
             accounts = TableAccounts(parent_ref=k1)
             if not accounts._exists:
                 print('Error reading accounts')
             else:
-                print(f'number of accounts in {k1} is {len(accounts._rows)}')
+                print(f'number of accounts in {k1} is {len(accounts.rows)}')
                 if cycle == 2:
                     accounts.new_instance(accounts=f'test{uuid.uuid4()}'[:-8], category_sort='96',
                                           start_date=date.fromisoformat('2019-02-01'))
@@ -191,30 +191,30 @@ if __name__ == '__main__':
                                           end_date=date.fromisoformat('2049-12-31'))
                     accounts.new_instance(accounts=f'test{uuid.uuid4()}'[:-8], category_sort=f'{uuid.uuid4()}'[-4:],
                                           start_date=date.today(), end_date=END_DATE)
-                    print(f'number of accounts in {k1} is {len(accounts._rows)}')
+                    print(f'number of accounts in {k1} is {len(accounts.rows)}')
                 cycle1 = 0
-                for k2, v2 in accounts._rows.items():
+                for k2, v2 in accounts.rows.items():
                     if cycle1 == 0:
                         cycle1 = 1
                         transactions = TableTransactions()
-                        print(f'number of transactions is {len(transactions._rows)}')
+                        print(f'number of transactions is {len(transactions.rows)}')
                         transactions = TableTransactions(parent_ref=-2, grandparent_ref=-2)
-                        print(f'number of transactions in -2,-2 is {len(transactions._rows)}')
+                        print(f'number of transactions in -2,-2 is {len(transactions.rows)}')
                         transactions = TableTransactions(parent_ref=-1, grandparent_ref=k1)
-                        print(f'number of transactions in -1,{k1} is {len(transactions._rows)}')
+                        print(f'number of transactions in -1,{k1} is {len(transactions.rows)}')
                         transactions = TableTransactions(parent_ref=0, grandparent_ref=k1)
-                        print(f'number of transactions in 0,{k1} is {len(transactions._rows)}')
+                        print(f'number of transactions in 0,{k1} is {len(transactions.rows)}')
                         transactions = TableTransactions(parent_ref=k2, grandparent_ref=0)
-                        print(f'number of transactions in {k2},0 is {len(transactions._rows)}')
+                        print(f'number of transactions in {k2},0 is {len(transactions.rows)}')
                         transactions = TableTransactions(parent_ref=k2, grandparent_ref=-1)
-                        print(f'number of transactions in {k2},-1 is {len(transactions._rows)}')
+                        print(f'number of transactions in {k2},-1 is {len(transactions.rows)}')
                         transactions = TableTransactions(parent_ref=-1, grandparent_ref=-1)
-                        print(f'number of transactions in -1,-1 is {len(transactions._rows)}')
+                        print(f'number of transactions in -1,-1 is {len(transactions.rows)}')
                     transactions = TableTransactions(parent_ref=k2, grandparent_ref=k1)
                     if not transactions._exists:
                         print('Error reading transactions')
                     else:
-                        print(f'number of transactions in {k1},{k2} is {len(transactions._rows)}')
+                        print(f'number of transactions in {k1},{k2} is {len(transactions.rows)}')
                         if cycle1 == 1:
                             cycle1 = 2
                             transactions.new_instance(category=f'test{uuid.uuid4()}'[:-8], category_sort='96',
@@ -224,5 +224,5 @@ if __name__ == '__main__':
                             transactions.new_instance(category=f'test{uuid.uuid4()}'[:-8],
                                                       category_sort=f'{uuid.uuid4()}'[-4:],
                                                       start_date=date.today(), end_date=END_DATE)
-                            print(f'number of transactions in {k1},{k2} is {len(transactions._rows)}')
+                            print(f'number of transactions in {k1},{k2} is {len(transactions.rows)}')
 """
