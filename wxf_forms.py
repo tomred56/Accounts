@@ -186,7 +186,7 @@ class SupplierEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_new_from)
         self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_new_to)
@@ -286,7 +286,7 @@ class AccountEdit(wx.Panel):
         self.m_staticText73.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText73, 0, wx.ALL, 5)
-        
+
         typeChoices = []
         self.type = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, typeChoices,
                                 wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -370,7 +370,7 @@ class AccountEdit(wx.Panel):
         self.m_staticText71.Hide()
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -383,7 +383,7 @@ class AccountEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -459,7 +459,7 @@ class AccountEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
@@ -566,7 +566,7 @@ class CategoryEdit(wx.Panel):
         self.m_staticText71.Hide()
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -582,7 +582,7 @@ class CategoryEdit(wx.Panel):
         self.m_staticText61.Hide()
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -661,7 +661,7 @@ class CategoryEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
@@ -768,7 +768,7 @@ class SubCatEdit(wx.Panel):
         self.m_staticText7.Hide()
         
         fgSizer3.Add(self.m_staticText7, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -781,7 +781,7 @@ class SubCatEdit(wx.Panel):
         self.m_staticText6.Wrap(-1)
         
         fgSizer3.Add(self.m_staticText6, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -857,7 +857,7 @@ class SubCatEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
@@ -961,7 +961,7 @@ class DetailEdit(wx.Panel):
         self.m_staticText71.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALL, 5)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -971,7 +971,7 @@ class DetailEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1047,7 +1047,7 @@ class DetailEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
@@ -1145,7 +1145,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer23.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         supplierChoices = []
         self.supplier = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, supplierChoices,
                                     wx.CB_DROPDOWN | wx.CB_SORT)
@@ -1202,7 +1202,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText712.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText712, 0, wx.ALL, 5)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1212,7 +1212,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText7111.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText7111, 0, wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1222,7 +1222,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText73.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText73, 0, wx.ALL, 5)
-        
+
         typeChoices = []
         self.type = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, typeChoices,
                                 wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1244,7 +1244,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText71.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALL, 5)
-        
+
         categoryChoices = []
         self.category = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, categoryChoices,
                                     wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1254,7 +1254,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText711.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText711, 0, wx.ALL, 5)
-        
+
         subcategoryChoices = []
         self.subcategory = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        subcategoryChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1266,7 +1266,7 @@ class TransactionEdit(wx.Panel):
         self.m_staticText7112.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText7112, 0, wx.ALL, 5)
-        
+
         detailChoices = []
         self.detail = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, detailChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1343,7 +1343,7 @@ class TransactionEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_new_from)
         self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_new_to)
@@ -1499,7 +1499,7 @@ class SubAccountEdit(wx.Panel):
         self.m_staticText71.Hide()
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1512,7 +1512,7 @@ class SubAccountEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1588,7 +1588,7 @@ class SubAccountEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
@@ -1728,7 +1728,7 @@ class ContactEdit(wx.Panel):
         self.m_staticText71.Hide()
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALIGN_CENTER | wx.ALL, 10)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1741,7 +1741,7 @@ class ContactEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -1817,7 +1817,7 @@ class ContactEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
@@ -1938,7 +1938,7 @@ class CardEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALL, 5)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -2020,7 +2020,7 @@ class CardEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
         self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_new_from)
@@ -2169,7 +2169,7 @@ class RulesEdit(wx.Panel):
         self.m_staticText71.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALL, 10)
-        
+
         grandparentChoices = []
         self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
                                        grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -2179,7 +2179,7 @@ class RulesEdit(wx.Panel):
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALL, 10)
-        
+
         parentChoices = []
         self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
                                   wx.CB_DROPDOWN | wx.CB_READONLY)
@@ -2255,7 +2255,7 @@ class RulesEdit(wx.Panel):
         
         self.SetSizer(bSizer_top)
         self.Layout()
-        
+
         # Connect Events
         self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_account)
         self.parent.Bind(wx.EVT_COMBOBOX, self.on_subaccount)
