@@ -79,8 +79,8 @@ class Database:
     
     def process(self, action='fetch', **kwargs):
         assert action in _ACTIONS, f'invalid process action requested {action}'
-        is_valid = True
-        if self._validate(action, **kwargs):
+        self._error_msg = ''
+        if is_valid := self._validate(action, **kwargs):
             if action == 'fetch':
                 is_valid = self._fetch(**kwargs)
             elif action == 'insert':
@@ -91,7 +91,6 @@ class Database:
                 pass
         if not is_valid:
             print(f'\n{self.table_name} : {action}{self._error_msg}')
-            self._error_msg = ''
         return is_valid
 
     def fetch(self, **kwargs):
@@ -100,6 +99,9 @@ class Database:
 
     def get_ref(self, name):
         return self.records.get(name, 0)
+
+    def get_message(self):
+        return self._error_msg
 
     def get_ancestors(self, ref):
         return [self.rows[ref].get('parent', 0), self.rows[ref].get('grandparent', 0)]

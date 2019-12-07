@@ -10,15 +10,9 @@ expand_option = dict(flag=wx.EXPAND)
 no_options = dict()
 empty_space = ((0, 0), expand_option)
 LOOKUPS: tuple = ('parent', 'grandparent', 'category', 'subcategory', 'detail')
-
-
-def _generic_click_quit(self, event):
-    self.parent_frame.single_sizer.ShowItems(False)
-    self.parent_frame.rows_sizer.ShowItems(True)
-    self.parent_frame.mid_sizer.Layout()
-    self.parent_frame.main_sizer.Layout()
-    self.parent_frame.SetSizerAndFit(self.parent_frame.main_sizer)
-    self.parent_frame.Centre()
+active_table = None
+active_parent = None
+active_grandparent = None
 
 
 class BaseWindow(wx.Frame):
@@ -28,7 +22,6 @@ class BaseWindow(wx.Frame):
         super().__init__(*args, **kwargs)
         self.Bind(wx.EVT_CHAR_HOOK, self.on_key_pressed_somewhere)
         self.data = data
-        self.active_table = None
 
         self.SetTitle('Manage My Accounts')
 
@@ -45,9 +38,10 @@ class BaseWindow(wx.Frame):
         #        self.calendar = MyCalendar(self)
         
         self.summary = MakeSummary(self)
-        self.data_grid = MakeGrid(self.data, self)
+        self.data_grid = MakeGrid(self)
         self.data_single = wx.Panel(self)
-        self.data_grid.active('accounts', parent_table_name='suppliers')
+        self.is_new = False
+        self.is_edit = False
         
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         self.toolbar_sizer = wx.BoxSizer()
@@ -60,7 +54,7 @@ class BaseWindow(wx.Frame):
         self.rows_sizer.Add(self.data_grid, wx.EXPAND)
         self.rows_sizer.AddStretchSpacer()
         self.rows_sizer.Layout()
-        self.single_sizer.Add(self.data_single, wx.EXPAND)
+        #        self.single_sizer.Add(self.data_single, wx.EXPAND)
         self.single_sizer.ShowItems(False)
         self.single_sizer.Layout()
         self.mid_sizer.Add(self.rows_sizer, wx.EXPAND)
@@ -74,10 +68,7 @@ class BaseWindow(wx.Frame):
         self.main_sizer.Add(self.summary_sizer, 0, wx.ALL | wx.EXPAND, 5)
         self.main_sizer.Add(self.mid_sizer, 1, wx.ALL | wx.EXPAND, 5)
         self.main_sizer.Add(self.buttons, 0, wx.ALL | wx.ALIGN_RIGHT | wx.ALIGN_BOTTOM | wx.EXPAND, 5)
-        self.main_sizer.Layout()
-        self.Layout()
-        self.SetSizerAndFit(self.main_sizer)
-        self.Centre()
+        self.process_tool('accounts', 'suppliers', None)
     
     def make_toolbar(self):
         icon1 = wx.Bitmap('System Equalizer.bmp')
@@ -110,7 +101,17 @@ class BaseWindow(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.on_subcategories, q_tool9)
         self.Bind(wx.EVT_TOOL, self.on_details, q_tool10)
         self.Bind(wx.EVT_TOOL, self.on_forecast, q_tool11)
-    
+
+    def process_tool(self, active, parent=None, grandparent=None):
+        global active_table, active_parent, active_grandparent
+        if active_table == active or self.is_edit or self.is_new:
+            return
+        active_table = active
+        active_parent = parent
+        active_grandparent = grandparent
+        self.data_grid.refresh(active, parent, grandparent)
+        self.change_panel()
+
     def on_quit(self, e):
         self.Close()
     
@@ -118,66 +119,34 @@ class BaseWindow(wx.Frame):
         e.Skip()
     
     def on_suppliers(self, e):
-        if self.data_grid.current_table is self.data['suppliers']: pass
-        self.data_grid.active('suppliers')
-        self.change_panel()
+        self.process_tool('suppliers', None, None)
     
     def on_contacts(self, e):
-        if self.data_grid.current_table is self.data['contacts']: pass
-        self.data_grid.active('contacts',
-                              parent_table_name='suppliers')
-        self.change_panel()
+        self.process_tool('contacts', 'suppliers', None)
     
     def on_accounts(self, e):
-        if self.data_grid.current_table is self.data['accounts']: pass
-        self.data_grid.active('accounts',
-                              parent_table_name='suppliers')
-        self.change_panel()
+        self.process_tool('accounts', 'suppliers', None)
     
     def on_subaccounts(self, e):
-        if self.data_grid.current_table is self.data['subaccounts']: pass
-        self.data_grid.active('subaccounts',
-                              parent_table_name='accounts',
-                              grandparent_table_name='suppliers')
-        self.change_panel()
+        self.process_tool('subaccounts', 'accounts', 'suppliers')
     
     def on_transactions(self, e):
-        if self.data_grid.current_table is self.data['transactions']: pass
-        self.data_grid.active('transactions',
-                              parent_table_name='accounts',
-                              grandparent_table_name='suppliers')
-        self.change_panel()
+        self.process_tool('transactions', 'accounts', 'suppliers')
     
     def on_cards(self, e):
-        if self.data_grid.current_table is self.data['cards']: pass
-        self.data_grid.active('cards',
-                              parent_table_name='accounts',
-                              grandparent_table_name='suppliers')
-        self.change_panel()
+        self.process_tool('cards', 'accounts', 'suppliers')
     
     def on_rules(self, e):
-        if self.data_grid.current_table is self.data['rules']: pass
-        self.data_grid.active('accounts',
-                              parent_table_name='suppliers')
-        self.change_panel()
+        self.process_tool('rules', 'accounts', 'suppliers')
     
     def on_categories(self, e):
-        if self.data_grid.current_table is self.data['categories']: pass
-        self.data_grid.active('categories')
-        self.change_panel()
+        self.process_tool('categories', None, None)
     
     def on_subcategories(self, e):
-        if self.data_grid.current_table is self.data['subcategories']: pass
-        self.data_grid.active('subcategories',
-                              parent_table_name='categories')
-        self.change_panel()
+        self.process_tool('subcategories', 'categories', None)
     
     def on_details(self, e):
-        if self.data_grid.current_table is self.data['details']: pass
-        self.data_grid.active('details',
-                              parent_table_name='subcategories',
-                              grandparent_table_name='categories')
-        self.change_panel()
+        self.process_tool('details', 'subcategories', 'categories')
     
     def on_forecast(self, e):
         self.summary.refresh()
@@ -194,11 +163,11 @@ class BaseWindow(wx.Frame):
     def change_panel(self):
     
         self.rows_sizer.Layout()
-        if self.data_grid.grid.GetNumberRows():
-            self.data_grid.grid.GoToCell(0, 0)
-            self.buttons.edit_record.Enable()
+        if self.data_grid.data_grid.GetNumberRows():
+            self.data_grid.data_grid.GoToCell(0, 0)
+            self.buttons.edit.Enable()
         else:
-            self.buttons.edit_record.Disable()
+            self.buttons.edit.Disable()
         self.single_sizer.Add(self.data_single, wx.EXPAND)
         self.single_sizer.ShowItems(False)
         self.single_sizer.Layout()
@@ -215,20 +184,21 @@ class MakeSummary(wx.Panel):
         super().__init__(*args, **kwargs)
         self.parent_frame = args[0]
         self.data = self.parent_frame.data
-        self.grid = wx.GridSizer(cols=6, vgap=5, hgap=50)
-        self.__load_values(self.data)
+        self.summary_grid = wx.GridSizer(cols=6, vgap=5, hgap=50)
+        self.__load_values()
+
+    def __load_values(self):
     
-    def __load_values(self, data):
-    
-        a_data = data['accounts'][0]
-        t_data = data['transactions'][0]
+        a_data = self.data['accounts'][0]
+        t_data = self.data['transactions'][0]
         values = {}
-        a_types = a_data.fetch_types()
+        a_types = set()
         if a_data.process('fetch'):
             if t_data.process('fetch'):
                 values['Income'] = sum(v['amount'] for v in t_data.records if v['amount'] > 0)
                 values['Expenditure'] = sum(v['amount'] for v in t_data.records if v['amount'] < 0)
                 values['Balance'] = sum(v['amount'] for v in t_data.records)
+                a_types = set(v['type'] for v in a_data.records)
                 for a_type in a_types:
                     values[a_type] = sum(v['amount'] for v in t_data.records
                                          if a_data.records[v['parent']]['account_type'] == a_type)
@@ -236,27 +206,26 @@ class MakeSummary(wx.Panel):
         for k, v in values.items():
             layout.append((wx.StaticText(self, -1, k, style=wx.ALIGN_RIGHT), wx.ALIGN_RIGHT))
             layout.append((wx.TextCtrl(self, value=f'{v}', style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
-        self.grid.AddMany(layout)
-        self.SetSizerAndFit(self.grid)
+        self.summary_grid.AddMany(layout)
+        self.SetSizerAndFit(self.summary_grid)
     
     def refresh(self):
-        self.grid.Clear()
-        self.grid.Layout()
-        self.__load_values(self.data)
+        self.summary_grid.Clear()
+        self.summary_grid.Layout()
+        self.__load_values()
         self.parent_frame.main_sizer.Layout()
         self.parent_frame.SetSizerAndFit(self.parent_frame.main_sizer)
 
 
 class MakeGrid(wx.Panel):
-    def __init__(self, data, *args, **kwargs):
-        wx.Panel.__init__(self, *args, **kwargs)
-        
-        # Create a wxGrid object
-        self.grid = wx.grid.Grid(self)
-        self.grid.CreateGrid(0, 0)
-        self.grid.Hide()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.parent_frame = args[0]
-        self.data = data
+        self.data = self.parent_frame.data
+        self.data_grid = wx.grid.Grid(self)
+        self.data_grid.Hide()
+        self.data_grid.CreateGrid(0, 0)
+        self.data_grid.SetSelectionMode(wx.grid.Grid.SelectRows)
         self.current_table = None
         self.parent_table = None
         self.grandparent_table = None
@@ -265,74 +234,82 @@ class MakeGrid(wx.Panel):
         self.detail = None
         self.row_count = 0
         self.cursor = (-1, -1)
-        self.Bind(wx.grid.EVT_GRID_SELECT_CELL, self.on_selected, self.grid)
+        self.Bind(wx.grid.EVT_GRID_RANGE_SELECT, self.on_selected, self.data_grid)
         self.Show()
-
-    def active(self, table_name, parent_table_name=None, myparent=0,
-               grandparent_table_name=None, mygrandparent=0):
-        #        self.grid.BeginBatch()
+    
+    def refresh(self, table_name, parent_table_name=None, grandparent_table_name=None,
+                myparent=0, mygrandparent=0):
+        global active_table, active_parent, active_grandparent
+        #        self.data_grid.BeginBatch()
         if self.current_table:
             if self.current_table.sel_rowcount:
-                self.grid.DeleteRows(0, self.current_table.sel_rowcount)
+                self.data_grid.DeleteRows(0, self.current_table.sel_rowcount)
             if self.current_table.colcount:
-                self.grid.DeleteCols(0, self.current_table.colcount)
+                self.data_grid.DeleteCols(0, self.current_table.colcount)
             self.parent_frame.single_sizer.Clear()
-            self.parent_frame.data_single.Destroy()
-        self.parent_frame.current = table_name
+            self.parent_frame.data_single = wx.Panel(self)
+            self.parent_frame.data_single.Hide()
         self.current_table = self.data[table_name][0]
-        self.parent_frame.data_single = self.data[table_name][1](self.parent_frame)
+        active_table = table_name
+        active_parent = parent_table_name
+        active_grandparent = grandparent_table_name
+        #        self.parent_frame.data_single = self.data[table_name][1](self.parent_frame)
         parent = self.data.get(parent_table_name, [None, None])
         self.parent_table = parent[0]
         grandparent = self.data.get(grandparent_table_name, [None, None])
         self.grandparent_table = grandparent[0]
         columns = self.current_table.columns
         colcount = self.current_table.colcount
-        self.grid.InsertCols(0, colcount - 1)
+        self.data_grid.InsertCols(0, colcount - 1)
         
-        # Then we call CreateGrid to set the dimensions of the grid
+        # Then we call CreateGrid to set the dimensions of the data_grid
         
-        # And set grid cell contents as appropriate
+        # And set data_grid cell contents as appropriate
         for i in range(1, colcount):
-            self.grid.SetColLabelValue(i - 1, columns[i][0])
-            #            self.grid.AutoSizeColLabelSize(i - 1)
+            self.data_grid.SetColLabelValue(i - 1, columns[i][0])
+            #            self.data_grid.AutoSizeColLabelSize(i - 1)
             if columns[i][1] is int and columns[i][0] not in LOOKUPS:
-                self.grid.SetColFormatNumber(i - 1)
+                self.data_grid.SetColFormatNumber(i - 1)
             elif columns[i][1] is float:
-                self.grid.SetColFormatFloat(i - 1, 10, 2)
+                self.data_grid.SetColFormatFloat(i - 1, 10, 2)
         if myparent:
             self.current_table.process(parent=myparent)
         else:
             self.current_table.process()
-        self.grid.InsertRows(0, self.current_table.sel_rowcount)
+        self.data_grid.InsertRows(0, self.current_table.sel_rowcount)
         rows = self.current_table.rows
         row = 0
         for k, v in rows.items():
-            self.grid.SetRowLabelValue(row, f'{k}')
+            self.data_grid.SetRowLabelValue(row, f'{k}')
             col = 0
             for k1, v1 in dict(v).items():
                 if k1 == 'key':
                     continue
                 elif k1 in LOOKUPS:
-                    self.grid.SetCellValue(row, col, f'{self.get_name(k1, v1)}')
+                    self.data_grid.SetCellValue(row, col, f'{self.get_name(k1, v1)}')
                 else:
-                    self.grid.SetCellValue(row, col, f'{v1}')
-                #                self.grid.SetReadOnly(row, col)
+                    self.data_grid.SetCellValue(row, col, f'{v1}')
+                #                self.data_grid.SetReadOnly(row, col)
                 col += 1
             row += 1
-        self.grid.EnableEditing(False)
-        self.grid.AutoSize()
-        self.grid.Show()
-        #        self.grid.EndBatch()
+        self.data_grid.EnableEditing(False)
+        self.data_grid.AutoSize()
+        self.data_grid.Show()
+        #        self.data_grid.EndBatch()
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.grid)
+        sizer.Add(self.data_grid)
         self.SetSizerAndFit(sizer)
-        self.cursor = (self.grid.GetGridCursorRow(), self.grid.GetGridCursorCol())
+        if len(rows):
+            self.data_grid.SelectRow(0)
+        self.cursor = (self.data_grid.GetGridCursorRow(), self.data_grid.GetGridCursorCol())
         self.Show()
 
+
     def on_selected(self, e):
-        self.parent_frame.buttons.edit_record.Enable()
-        self.cursor = (e.GetRow(), e.GetCol())
-    
+        if e.Selecting():
+            self.parent_frame.buttons.edit.Enable()
+            self.cursor = (e.GetTopRow(), e.GetLeftCol())
+
     def get_name(self, lookup, key):
         if lookup == 'parent':
             return dict(self.parent_table.rows.get(key, {})).get('name', '')
@@ -381,9 +358,18 @@ class Categories(wxf.CategoryEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
+
+    def new(self):
+        self.date_from.Value = START_DATE
+        self.date_to.Value = END_DATE
+        self.name = ''
+
+    def insert(self):
+        if is_valid := self.parent_frame.current.process('insert'):
+            self.SetStatusText('Success', 1)
+        else:
+            self.SetStatusText(self.parent_frame.current.get_message(), 2)
+        return is_valid
 
 
 class SubCategories(wxf.SubCatEdit):
@@ -391,17 +377,11 @@ class SubCategories(wxf.SubCatEdit):
         super().__init__(parent)
         self.parent_frame = parent
     
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
-
 
 class Details(wxf.DetailEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
 
 
 class Suppliers(wxf.SupplierEdit):
@@ -409,9 +389,6 @@ class Suppliers(wxf.SupplierEdit):
         super().__init__(parent)
         self.parent_frame = parent
     
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
-
 
 class Accounts(wxf.AccountEdit):
     def __init__(self, parent):
@@ -419,85 +396,109 @@ class Accounts(wxf.AccountEdit):
         self.parent_frame = parent
         self.Show()
     
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
-
 
 class SubAccounts(wxf.SubAccountEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
 
 
 class Transactions(wxf.TransactionEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
 
 
 class Rules(wxf.RulesEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
 
 
 class Cards(wxf.CardEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
 
 
 class Contacts(wxf.ContactEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent_frame = parent
-    
-    def click_quit(self, event):
-        _generic_click_quit(self, event)
 
 
 class MakeButtons(wxf.Buttons):
     def __init__(self, *args, **kwargs):
         wxf.Buttons.__init__(self, *args, **kwargs)
-        self.edit_record.Disable()
-        self.apply_changes.Disable()
-        self.cancel_changes.Disable()
+        self.new.Enable()
+        self.edit.Disable()
+        self.apply.Disable()
+        self.reset.Disable()
+        self.cancel.Disable()
+        self.quit.Enable()
         self.parent_frame = args[0]
         self.data = self.parent_frame.data
-        self.current = None
-        self.popup = None
 
-    def click_new(self, event):
+    def on_new(self, event):
+        global active_table, active_parent, active_grandparent
+        self.parent_frame.rows_sizer.ShowItems(False)
+        self.parent_frame.buttons.new.Disable()
+        self.parent_frame.buttons.edit.Disable()
+        self.parent_frame.buttons.reset.Enable()
+        self.parent_frame.buttons.apply.Enable()
+        self.parent_frame.buttons.cancel.Enable()
+        self.parent_frame.is_new = True
+        self.parent_frame.data_single.Hide()
+        self.parent_frame.single_sizer.Clear()
+        self.parent_frame.data_single = self.data[active_table][1](self.parent_frame)
+        self.parent_frame.data_single.new()
+        self.parent_frame.data_single.Show()
+        self.parent_frame.single_sizer.Add(self.parent_frame.data_single, wx.EXPAND)
+        self.parent_frame.single_sizer.ShowItems(True)
+        self.parent_frame.single_sizer.Layout()
+        self.parent_frame.mid_sizer.Layout()
+        self.parent_frame.main_sizer.Layout()
+        self.parent_frame.SetSizerAndFit(self.parent_frame.main_sizer)
+        self.parent_frame.Centre()
+
+    def on_edit(self, event):
+        self.parent_frame.buttons.new.Disable()
+        self.parent_frame.buttons.edit.Disable()
+        self.parent_frame.buttons.reset.Enable()
+        self.parent_frame.buttons.apply.Enable()
+        self.parent_frame.buttons.cancel.Enable()
+        self.parent_frame.is_edit = True
         self.parent_frame.rows_sizer.ShowItems(False)
         self.parent_frame.single_sizer.ShowItems(True)
         self.parent_frame.mid_sizer.Layout()
         self.parent_frame.main_sizer.Layout()
         self.parent_frame.SetSizerAndFit(self.parent_frame.main_sizer)
         self.parent_frame.Centre()
+
+    def on_reset(self, event):
+        if self.parent_frame.is_new:
+            self.on_new(None)
+
+    def on_apply(self, event):
+        if self.parent_frame.is_new:
+            if self.parent_frame.data_single.insert():
+                self.on_cancel(None)
+
+    def on_cancel(self, event):
+        self.parent_frame.buttons.new.Enable()
+        self.parent_frame.buttons.edit.Disable()
+        self.parent_frame.buttons.reset.Disable()
+        self.parent_frame.buttons.apply.Disable()
+        self.parent_frame.buttons.cancel.Disable()
+        self.parent_frame.is_new = False
+        self.parent_frame.is_edit = False
     
-    def click_edit(self, event):
-        pass
-    
-    def click_refresh(self, event):
-        self.parent_frame.summary.refresh()
-    
-    def click_apply(self, event):
-        pass
-    
-    def click_cancel(self, event):
-        pass
-    
-    def click_quit(self, event):
+        self.parent_frame.single_sizer.ShowItems(False)
+        self.parent_frame.rows_sizer.ShowItems(True)
+        self.parent_frame.mid_sizer.Layout()
+        self.parent_frame.main_sizer.Layout()
+        self.parent_frame.SetSizerAndFit(self.parent_frame.main_sizer)
+        self.parent_frame.Centre()
+
+    def on_quit(self, event):
         self.parent_frame.on_quit(event)
