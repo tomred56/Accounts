@@ -9,7 +9,217 @@
 
 import wx
 import wx.adv
+import wx.lib.masked
 import wx.xrc
+
+
+###########################################################################
+## Class MainFrame
+###########################################################################
+
+class MainFrame(wx.Frame):
+    
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"Manage My Accounts", pos=wx.DefaultPosition,
+                          size=wx.Size(-1, -1), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tool_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        self.toolbar = wx.ToolBar(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_TEXT)
+        self.toolbar.SetToolSeparation(1)
+        self.t_suppliers = self.toolbar.AddLabelTool(wx.ID_ANY, u"Suppliers",
+                                                     wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                     wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_contacts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Contacts",
+                                                    wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                    wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_accounts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Accounts", wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY),
+                                                    wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_subaccounts = self.toolbar.AddLabelTool(wx.ID_ANY, u"SubAccounts",
+                                                       wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                       wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_transactions = self.toolbar.AddLabelTool(wx.ID_ANY, u"Transactions",
+                                                        wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                        wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_cards = self.toolbar.AddLabelTool(wx.ID_ANY, u"Cards",
+                                                 wx.Bitmap(u"System Equalizer.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                 wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_rules = self.toolbar.AddLabelTool(wx.ID_ANY, u"Rules",
+                                                 wx.Bitmap(u"System Equalizer.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                 wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_categories = self.toolbar.AddLabelTool(wx.ID_ANY, u"Categories",
+                                                      wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY),
+                                                      wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString,
+                                                      None)
+        
+        self.t_subcategories = self.toolbar.AddLabelTool(wx.ID_ANY, u"SubCategories",
+                                                         wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY),
+                                                         wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString,
+                                                         None)
+        
+        self.t_details = self.toolbar.AddLabelTool(wx.ID_ANY, u"Details",
+                                                   wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                   wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_forecasts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Forecasts",
+                                                     wx.Bitmap(u"Search.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                     wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        
+        self.toolbar.Realize()
+        
+        self.tool_sizer.Add(self.toolbar, 0, wx.EXPAND, 5)
+        
+        self.main_sizer.Add(self.tool_sizer, 0, wx.ALIGN_TOP | wx.EXPAND, 5)
+        
+        self.summary = wx.BoxSizer(wx.VERTICAL)
+        
+        self.main_sizer.Add(self.summary, 0, wx.EXPAND, 5)
+        
+        self.single = wx.BoxSizer(wx.VERTICAL)
+        
+        self.main_sizer.Add(self.single, 0, wx.EXPAND, 5)
+        
+        self.rows = wx.BoxSizer(wx.VERTICAL)
+        
+        self.main_sizer.Add(self.rows, 1, wx.EXPAND, 5)
+        
+        self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        
+        self.buttons_sizer.Add((0, 0), 1, wx.EXPAND, 5)
+        
+        self.b_new = wx.Button(self, wx.ID_ANY, u"New", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
+        self.b_new.SetToolTip(u"Add a New Row")
+        
+        self.buttons_sizer.Add(self.b_new, 0,
+                               wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
+        
+        self.b_edit = wx.Button(self, wx.ID_ANY, u"Edit", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
+        self.b_edit.Enable(False)
+        self.b_edit.SetToolTip(u"Edit Currently Selected Row")
+        
+        self.buttons_sizer.Add(self.b_edit, 0,
+                               wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
+        
+        self.b_reset = wx.Button(self, wx.ID_ANY, u"Reset", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
+        self.b_reset.Enable(False)
+        self.b_reset.SetToolTip(u"Reset Original Values")
+        
+        self.buttons_sizer.Add(self.b_reset, 0,
+                               wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
+        
+        self.b_apply = wx.Button(self, wx.ID_ANY, u"Apply", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
+        self.b_apply.Enable(False)
+        self.b_apply.SetToolTip(u"Save Changes")
+        
+        self.buttons_sizer.Add(self.b_apply, 0,
+                               wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
+        
+        self.b_cancel = wx.Button(self, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
+        self.b_cancel.Enable(False)
+        self.b_cancel.SetToolTip(u"Cancel Changes Without Saving")
+        
+        self.buttons_sizer.Add(self.b_cancel, 0,
+                               wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
+        
+        self.b_quit = wx.Button(self, wx.ID_ANY, u"Quit", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
+        self.b_quit.SetToolTip(u"Close App")
+        
+        self.buttons_sizer.Add(self.b_quit, 0,
+                               wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
+        
+        self.main_sizer.Add(self.buttons_sizer, 0, wx.ALIGN_BOTTOM | wx.EXPAND, 5)
+        
+        self.SetSizer(self.main_sizer)
+        self.Layout()
+        self.main_sizer.Fit(self)
+        self.status_bar = self.CreateStatusBar(3, wx.STB_DEFAULT_STYLE, wx.ID_ANY)
+        
+        self.Centre(wx.BOTH)
+        
+        # Connect Events
+        self.Bind(wx.EVT_TOOL, self.on_suppliers_tool, id=self.t_suppliers.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_contacts_tool, id=self.t_contacts.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_accounts_tool, id=self.t_accounts.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_subaccounts_tool, id=self.t_subaccounts.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_transactions_tool, id=self.t_transactions.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_cards_tool, id=self.t_cards.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_rules_tool, id=self.t_rules.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_categories_tool, id=self.t_categories.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_subcategories_tool, id=self.t_subcategories.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_details_tool, id=self.t_details.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_forecast_tool, id=self.t_forecasts.GetId())
+        self.b_new.Bind(wx.EVT_BUTTON, self.on_new_button)
+        self.b_edit.Bind(wx.EVT_BUTTON, self.on_edit_button)
+        self.b_reset.Bind(wx.EVT_BUTTON, self.on_reset_button)
+        self.b_apply.Bind(wx.EVT_BUTTON, self.on_apply_button)
+        self.b_cancel.Bind(wx.EVT_BUTTON, self.on_cancel_button)
+        self.b_quit.Bind(wx.EVT_BUTTON, self.on_quit_button)
+    
+    def __del__(self):
+        pass
+    
+    # Virtual event handlers, overide them in your derived class
+    def on_suppliers_tool(self, event):
+        event.Skip()
+    
+    def on_contacts_tool(self, event):
+        event.Skip()
+    
+    def on_accounts_tool(self, event):
+        event.Skip()
+    
+    def on_subaccounts_tool(self, event):
+        event.Skip()
+    
+    def on_transactions_tool(self, event):
+        event.Skip()
+    
+    def on_cards_tool(self, event):
+        event.Skip()
+    
+    def on_rules_tool(self, event):
+        event.Skip()
+    
+    def on_categories_tool(self, event):
+        event.Skip()
+    
+    def on_subcategories_tool(self, event):
+        event.Skip()
+    
+    def on_details_tool(self, event):
+        event.Skip()
+    
+    def on_forecast_tool(self, event):
+        event.Skip()
+    
+    def on_new_button(self, event):
+        event.Skip()
+    
+    def on_edit_button(self, event):
+        event.Skip()
+    
+    def on_reset_button(self, event):
+        event.Skip()
+    
+    def on_apply_button(self, event):
+        event.Skip()
+    
+    def on_cancel_button(self, event):
+        event.Skip()
+    
+    def on_quit_button(self, event):
+        event.Skip()
 
 
 ###########################################################################
@@ -24,13 +234,14 @@ class SupplierEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.header = wx.StaticText(self, wx.ID_ANY, u"Supplier Details", wx.DefaultPosition, wx.DefaultSize,
-                                    wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.header.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Supplier Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.header.SetFont(wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_header.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -42,19 +253,19 @@ class SupplierEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"Web Address", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText11.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.web = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
-                               wx.TE_AUTO_URL | wx.TE_RICH2)
-        self.web.SetMaxLength(80)
-        fgSizer2.Add(self.web, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_web = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
+                                 wx.TE_AUTO_URL | wx.TE_RICH2)
+        self.p_web.SetMaxLength(80)
+        fgSizer2.Add(self.p_web, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -74,10 +285,11 @@ class SupplierEdit(wx.Panel):
         
         fgSizer14.Add(self.m_staticText73, 0, wx.ALL, 5)
         
-        self.address = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        self.address.SetMinSize(wx.Size(-1, 75))
+        self.p_address = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE)
+        self.p_address.SetMinSize(wx.Size(-1, 75))
         
-        fgSizer14.Add(self.address, 1, wx.ALL | wx.EXPAND, 5)
+        fgSizer14.Add(self.p_address, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText55 = wx.StaticText(self, wx.ID_ANY, u"Phone", wx.DefaultPosition, wx.DefaultSize,
                                             wx.ALIGN_LEFT)
@@ -85,16 +297,16 @@ class SupplierEdit(wx.Panel):
         
         fgSizer14.Add(self.m_staticText55, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.phone = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
-        fgSizer14.Add(self.phone, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_phone = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        fgSizer14.Add(self.p_phone, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText70 = wx.StaticText(self, wx.ID_ANY, u"e-mail", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText70.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText70, 0, wx.ALL, 5)
         
-        self.email = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
-        fgSizer14.Add(self.email, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_email = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        fgSizer14.Add(self.p_email, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -108,9 +320,9 @@ class SupplierEdit(wx.Panel):
         fgSizer31.SetFlexibleDirection(wx.BOTH)
         fgSizer31.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_ALL)
         
-        self.is_financial = wx.CheckBox(self, wx.ID_ANY, u"Financial Institution?", wx.DefaultPosition, wx.DefaultSize,
-                                        0)
-        fgSizer31.Add(self.is_financial, 0, wx.ALL, 5)
+        self.p_is_financial = wx.CheckBox(self, wx.ID_ANY, u"Financial Institution?", wx.DefaultPosition,
+                                          wx.DefaultSize, 0)
+        fgSizer31.Add(self.p_is_financial, 0, wx.ALL, 5)
         
         bSizer49.Add(fgSizer31, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -127,39 +339,46 @@ class SupplierEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
+        
+        self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
+        bSizer49.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
         
         bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
         
-        self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -175,14 +394,14 @@ class AccountEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.m_staticText8 = wx.StaticText(self, wx.ID_ANY, u"Account Details", wx.DefaultPosition, wx.DefaultSize,
-                                           wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.m_staticText8.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Account Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.m_staticText8.SetFont(
+        self.p_header.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.m_staticText8, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -195,19 +414,19 @@ class AccountEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText61, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_LEFT | wx.ALL, 5)
         
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.parent, 1, wx.ALL | wx.EXPAND, 5)
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Account Name", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"Account Description", wx.DefaultPosition, wx.DefaultSize,
                                             0)
@@ -215,9 +434,9 @@ class AccountEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.description = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.description.SetMaxLength(80)
-        fgSizer2.Add(self.description, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_description = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_description.SetMaxLength(80)
+        fgSizer2.Add(self.p_description, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -235,60 +454,37 @@ class AccountEdit(wx.Panel):
                                             wx.ALIGN_LEFT)
         self.m_staticText55.Wrap(-1)
         
-        fgSizer14.Add(self.m_staticText55, 1, wx.ALL | wx.EXPAND, 5)
+        fgSizer14.Add(self.m_staticText55, 0, wx.ALL | wx.EXPAND, 5)
         
-        fgSizer22 = wx.FlexGridSizer(1, 5, 0, 0)
-        fgSizer22.SetFlexibleDirection(wx.HORIZONTAL)
-        fgSizer22.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
+        self.p_sort_code = wx.lib.masked.TextCtrl(self, wx.ID_ANY, u"00-00-00", wx.DefaultPosition, wx.DefaultSize, 0,
+                                                  mask=u"##-##-##")
+        self.p_sort_code.SetMaxLength(8)
         
-        self.sort1 = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_CENTER)
-        self.sort1.SetMaxLength(2)
-        self.sort1.SetMaxSize(wx.Size(30, -1))
+        self.p_sort_code.SetFont(
+            wx.Font(wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL,
+                    False, wx.EmptyString))
+        self.p_sort_code.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
         
-        fgSizer22.Add(self.sort1, 0, wx.ALL, 5)
-        
-        self.m_staticText68 = wx.StaticText(self, wx.ID_ANY, u"-", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.m_staticText68.Wrap(-1)
-        
-        fgSizer22.Add(self.m_staticText68, 0, wx.ALL, 5)
-        
-        self.sort2 = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_CENTER)
-        self.sort2.SetMaxLength(2)
-        self.sort2.SetMaxSize(wx.Size(30, -1))
-        
-        fgSizer22.Add(self.sort2, 0, wx.ALL, 5)
-        
-        self.m_staticText69 = wx.StaticText(self, wx.ID_ANY, u"-", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.m_staticText69.Wrap(-1)
-        
-        fgSizer22.Add(self.m_staticText69, 0, wx.ALL, 5)
-        
-        self.sort3 = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_CENTER)
-        self.sort3.SetMaxLength(2)
-        self.sort3.SetMaxSize(wx.Size(30, -1))
-        
-        fgSizer22.Add(self.sort3, 0, wx.ALL, 5)
-        
-        fgSizer14.Add(fgSizer22, 0, 0, 5)
+        fgSizer14.Add(self.p_sort_code, 0, wx.ALL, 5)
         
         self.m_staticText70 = wx.StaticText(self, wx.ID_ANY, u"Account Number", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText70.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText70, 0, wx.ALL, 5)
         
-        self.account_no = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
-        self.account_no.SetMaxLength(8)
-        fgSizer14.Add(self.account_no, 1, wx.ALL, 5)
+        self.p_account_no = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        self.p_account_no.SetMaxLength(8)
+        fgSizer14.Add(self.p_account_no, 1, wx.ALL, 5)
         
         self.m_staticText74 = wx.StaticText(self, wx.ID_ANY, u"Initial Value", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText74.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText74, 0, wx.ALL, 5)
         
-        self.initial = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                         wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.initial.SetDigits(2)
-        fgSizer14.Add(self.initial, 0, wx.ALL, 5)
+        self.p_initial = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                           wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_initial.SetDigits(2)
+        fgSizer14.Add(self.p_initial, 0, wx.ALL, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL, 5)
         
@@ -307,23 +503,23 @@ class AccountEdit(wx.Panel):
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         
-        holderChoices = [u"Dermot", u"Fenella", u"Joint", u"Other"]
-        self.holder = wx.ComboBox(self, wx.ID_ANY, u"Dermot", wx.DefaultPosition, wx.DefaultSize, holderChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.holder.SetSelection(0)
-        fgSizer31.Add(self.holder, 1, wx.ALL | wx.EXPAND, 5)
+        p_holderChoices = [u"Dermot", u"Fenella", u"Joint", u"Other"]
+        self.p_holder = wx.ComboBox(self, wx.ID_ANY, u"Dermot", wx.DefaultPosition, wx.DefaultSize, p_holderChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.p_holder.SetSelection(0)
+        fgSizer31.Add(self.p_holder, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText73 = wx.StaticText(self, wx.ID_ANY, u"Account Type", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText73.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText73, 0, wx.ALL, 5)
         
-        typeChoices = [u"Current", u"Savings", u"ISA", u"Credit Card", u"Loan", u"Mortgage", u"Cash", u"Shares",
-                       u"Current", u"Insurance"]
-        self.type = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, typeChoices,
-                                wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.type.SetSelection(10)
-        fgSizer31.Add(self.type, 0, wx.ALL | wx.EXPAND, 5)
+        p_typeChoices = [u"Current", u"Savings", u"ISA", u"Credit Card", u"Loan", u"Mortgage", u"Cash", u"Shares",
+                         u"Current", u"Insurance"]
+        self.p_type = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, p_typeChoices,
+                                  wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.p_type.SetSelection(10)
+        fgSizer31.Add(self.p_type, 0, wx.ALL | wx.EXPAND, 5)
         
         bSizer49.Add(fgSizer31, 0, wx.ALL, 5)
         
@@ -340,13 +536,14 @@ class AccountEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -357,30 +554,36 @@ class AccountEdit(wx.Panel):
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.holder.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_supplier)
+        self.p_holder.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_parent(self, event):
+    def lookup_supplier(self, event):
         event.Skip()
     
     def on_grandparent(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -396,14 +599,14 @@ class CategoryEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.m_staticText8 = wx.StaticText(self, wx.ID_ANY, u"Category Details", wx.DefaultPosition, wx.DefaultSize,
-                                           wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.m_staticText8.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Category Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.m_staticText8.SetFont(
+        self.p_header.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.m_staticText8, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer21 = wx.FlexGridSizer(1, 2, 0, 0)
         fgSizer21.AddGrowableCol(1)
@@ -415,9 +618,9 @@ class CategoryEdit(wx.Panel):
         
         fgSizer21.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer21.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer21.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer21, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         
@@ -450,13 +653,14 @@ class CategoryEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -467,22 +671,32 @@ class CategoryEdit(wx.Panel):
         self.m_staticline6 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALIGN_TOP | wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_name.Bind(wx.EVT_TEXT, self.on_text)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_date_from(self, event):
+    def on_text(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_start_date(self, event):
+        event.Skip()
+    
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -498,14 +712,14 @@ class SubCatEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.m_staticText8 = wx.StaticText(self, wx.ID_ANY, u"Subcategory Details", wx.DefaultPosition, wx.DefaultSize,
-                                           wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.m_staticText8.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Subcategory Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.m_staticText8.SetFont(
+        self.p_header.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.m_staticText8, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -517,19 +731,19 @@ class SubCatEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText6, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.parent, 1, wx.ALL | wx.EXPAND, 5)
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Description", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 5)
         
@@ -562,13 +776,14 @@ class SubCatEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText5, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -579,26 +794,32 @@ class SubCatEdit(wx.Panel):
         self.m_staticline6 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_category)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_parent(self, event):
+    def lookup_category(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -614,14 +835,14 @@ class DetailEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.m_staticText8 = wx.StaticText(self, wx.ID_ANY, u"Detail Information", wx.DefaultPosition, wx.DefaultSize,
-                                           wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.m_staticText8.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Detail Information", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.m_staticText8.SetFont(
+        self.p_header.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.m_staticText8, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -633,29 +854,29 @@ class DetailEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText71, 0, wx.ALL, 5)
         
-        grandparentChoices = []
-        self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
-                                       grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.grandparent, 1, wx.ALL | wx.EXPAND, 5)
+        p_grandparentChoices = []
+        self.p_grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
+                                         p_grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_grandparent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText61 = wx.StaticText(self, wx.ID_ANY, u"Sub Category", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText61.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.parent, 1, wx.ALL | wx.EXPAND, 5)
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Description", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         
@@ -688,13 +909,14 @@ class DetailEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -705,30 +927,36 @@ class DetailEdit(wx.Panel):
         self.m_staticline1 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline1, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_grandparent.Bind(wx.EVT_COMBOBOX, self.lookup_category)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_subcategory)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_grandparent(self, event):
+    def lookup_category(self, event):
         event.Skip()
     
-    def on_parent(self, event):
+    def lookup_subcategory(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -744,14 +972,14 @@ class TransactionEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.m_staticText8 = wx.StaticText(self, wx.ID_ANY, u"Transaction Details", wx.DefaultPosition, wx.DefaultSize,
-                                           wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.m_staticText8.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Transaction Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.m_staticText8.SetFont(
+        self.p_header.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.m_staticText8, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer23 = wx.FlexGridSizer(0, 7, 0, 0)
         fgSizer23.AddGrowableCol(1)
@@ -765,29 +993,29 @@ class TransactionEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                          wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                            wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         self.m_staticText74 = wx.StaticText(self, wx.ID_ANY, u"Amount", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText74.Wrap(-1)
         
         fgSizer23.Add(self.m_staticText74, 0, wx.ALIGN_BOTTOM | wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.initial = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                         wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0.000000, 0.01)
-        self.initial.SetDigits(2)
-        fgSizer23.Add(self.initial, 0, wx.ALIGN_BOTTOM | wx.ALIGN_CENTER | wx.ALL, 10)
+        self.p_amount = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                          wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0.000000, 0.01)
+        self.p_amount.SetDigits(2)
+        fgSizer23.Add(self.p_amount, 0, wx.ALIGN_BOTTOM | wx.ALIGN_CENTER | wx.ALL, 10)
         
         self.m_staticText61 = wx.StaticText(self, wx.ID_ANY, u"Supplier", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText61.Wrap(-1)
         
         fgSizer23.Add(self.m_staticText61, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-
-        supplierChoices = []
-        self.supplier = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, supplierChoices,
-                                    wx.CB_DROPDOWN | wx.CB_SORT)
-        fgSizer23.Add(self.supplier, 0, wx.ALL, 10)
+        
+        p_supplierChoices = []
+        self.p_supplier = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_supplierChoices,
+                                      wx.CB_DROPDOWN | wx.CB_SORT)
+        fgSizer23.Add(self.p_supplier, 0, wx.ALL, 10)
         
         bSizer_top.Add(fgSizer23, 0, wx.ALIGN_BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -804,18 +1032,18 @@ class TransactionEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"Bank Description", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText11.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.bank_description = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.bank_description.SetMaxLength(80)
-        fgSizer2.Add(self.bank_description, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_description = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_description.SetMaxLength(80)
+        fgSizer2.Add(self.p_description, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -833,31 +1061,31 @@ class TransactionEdit(wx.Panel):
         self.m_staticText712.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText712, 0, wx.ALL, 5)
-
-        grandparentChoices = []
-        self.grandparent = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                       grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer14.Add(self.grandparent, 0, wx.ALL | wx.EXPAND, 5)
+        
+        p_grandparentChoices = []
+        self.p_grandparent = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                         p_grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer14.Add(self.p_grandparent, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText7111 = wx.StaticText(self, wx.ID_ANY, u"Account", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText7111.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText7111, 0, wx.ALL, 5)
-
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer14.Add(self.parent, 0, wx.ALL | wx.EXPAND, 5)
+        
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                    p_parentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer14.Add(self.p_parent, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText73 = wx.StaticText(self, wx.ID_ANY, u"TransType", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText73.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText73, 0, wx.ALL, 5)
         
-        transaction_typeChoices = []
-        self.transaction_type = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
-                                            transaction_typeChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer14.Add(self.transaction_type, 0, wx.ALL | wx.EXPAND, 5)
+        p_typeChoices = []
+        self.p_type = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_typeChoices,
+                                  wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer14.Add(self.p_type, 0, wx.ALL | wx.EXPAND, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -875,35 +1103,35 @@ class TransactionEdit(wx.Panel):
         self.m_staticText71.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALL, 5)
-
-        categoryChoices = []
-        self.category = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, categoryChoices,
-                                    wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer31.Add(self.category, 0, wx.ALL | wx.EXPAND, 5)
+        
+        p_categoryChoices = []
+        self.p_category = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_categoryChoices,
+                                      wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer31.Add(self.p_category, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText711 = wx.StaticText(self, wx.ID_ANY, u"SubCategory", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText711.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText711, 0, wx.ALL, 5)
-
-        subcategoryChoices = []
-        self.subcategory = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
-                                       subcategoryChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.subcategory.Enable(False)
         
-        fgSizer31.Add(self.subcategory, 0, wx.ALL | wx.EXPAND, 5)
+        p_subcategoryChoices = []
+        self.p_subcategory = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
+                                         p_subcategoryChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.p_subcategory.Enable(False)
+        
+        fgSizer31.Add(self.p_subcategory, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText7112 = wx.StaticText(self, wx.ID_ANY, u"Detail", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText7112.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText7112, 0, wx.ALL, 5)
-
-        detailChoices = []
-        self.detail = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, detailChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.detail.Enable(False)
         
-        fgSizer31.Add(self.detail, 0, wx.ALL | wx.EXPAND, 5)
+        p_detailChoices = []
+        self.p_detail = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_detailChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.p_detail.Enable(False)
+        
+        fgSizer31.Add(self.p_detail, 0, wx.ALL | wx.EXPAND, 5)
         
         bSizer49.Add(fgSizer31, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -925,27 +1153,34 @@ class TransactionEdit(wx.Panel):
         
         fgSizer86.Add(self.m_staticText55, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.notes = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        self.notes.SetMaxLength(8)
-        fgSizer86.Add(self.notes, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_notes = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
+        self.p_notes.SetMaxLength(8)
+        fgSizer86.Add(self.p_notes, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer86, 0, wx.EXPAND, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date)
-        self.supplier.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.category.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.subcategory.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.detail.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
+        self.p_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date)
+        self.p_supplier.Bind(wx.EVT_COMBOBOX, self.on_parent)
+        self.p_grandparent.Bind(wx.EVT_COMBOBOX, self.lookup_supplier)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
+        self.p_type.Bind(wx.EVT_COMBOBOX, self.lookup_type)
+        self.p_category.Bind(wx.EVT_COMBOBOX, self.lookup_category)
+        self.p_subcategory.Bind(wx.EVT_COMBOBOX, self.lookup_subcategory)
+        self.p_detail.Bind(wx.EVT_COMBOBOX, self.lookup_detail)
     
     def __del__(self):
         pass
@@ -957,7 +1192,22 @@ class TransactionEdit(wx.Panel):
     def on_parent(self, event):
         event.Skip()
     
-    def on_grandparent(self, event):
+    def lookup_supplier(self, event):
+        event.Skip()
+    
+    def lookup_account(self, event):
+        event.Skip()
+    
+    def lookup_type(self, event):
+        event.Skip()
+    
+    def lookup_category(self, event):
+        event.Skip()
+    
+    def lookup_subcategory(self, event):
+        event.Skip()
+    
+    def lookup_detail(self, event):
         event.Skip()
 
 
@@ -973,13 +1223,14 @@ class SubAccountEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.header = wx.StaticText(self, wx.ID_ANY, u"SubAccount Details", wx.DefaultPosition, wx.DefaultSize,
-                                    wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.header.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"SubAccount Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.header.SetFont(wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_header.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -991,19 +1242,19 @@ class SubAccountEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText61, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.parent, 1, wx.ALL | wx.EXPAND, 5)
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"SubAccount Name", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"SubAccount Description", wx.DefaultPosition,
                                             wx.DefaultSize, 0)
@@ -1011,9 +1262,9 @@ class SubAccountEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.description = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.description.SetMaxLength(80)
-        fgSizer2.Add(self.description, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_description = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_description.SetMaxLength(80)
+        fgSizer2.Add(self.p_description, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -1032,30 +1283,30 @@ class SubAccountEdit(wx.Panel):
         
         fgSizer14.Add(self.m_staticText74, 0, wx.ALL, 5)
         
-        self.initial = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                         wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.initial.SetDigits(2)
-        fgSizer14.Add(self.initial, 0, wx.ALL, 5)
+        self.p_initial = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                           wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_initial.SetDigits(2)
+        fgSizer14.Add(self.p_initial, 0, wx.ALL, 5)
         
         self.m_staticText741 = wx.StaticText(self, wx.ID_ANY, u"Commission", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText741.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText741, 0, wx.ALL, 5)
         
-        self.commission = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                            wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.commission.SetDigits(2)
-        fgSizer14.Add(self.commission, 0, wx.ALL, 5)
+        self.p_commission = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                              wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_commission.SetDigits(2)
+        fgSizer14.Add(self.p_commission, 0, wx.ALL, 5)
         
         self.m_staticText7411 = wx.StaticText(self, wx.ID_ANY, u"Rate", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText7411.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText7411, 0, wx.ALL, 5)
         
-        self.rate = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.rate.SetDigits(2)
-        fgSizer14.Add(self.rate, 0, wx.ALL, 5)
+        self.p_rate = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                        wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_rate.SetDigits(2)
+        fgSizer14.Add(self.p_rate, 0, wx.ALL, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -1075,13 +1326,14 @@ class SubAccountEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -1092,26 +1344,32 @@ class SubAccountEdit(wx.Panel):
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_parent(self, event):
+    def lookup_account(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -1127,13 +1385,14 @@ class ContactEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.header = wx.StaticText(self, wx.ID_ANY, u"Contact Details", wx.DefaultPosition, wx.DefaultSize,
-                                    wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.header.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Contact Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.header.SetFont(wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_header.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1145,19 +1404,19 @@ class ContactEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText61, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.parent, 1, wx.ALL | wx.EXPAND, 5)
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Name", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -1177,8 +1436,9 @@ class ContactEdit(wx.Panel):
         
         fgSizer14.Add(self.m_staticText73, 0, wx.ALL, 5)
         
-        self.address = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        fgSizer14.Add(self.address, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_address = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE)
+        fgSizer14.Add(self.p_address, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -1198,8 +1458,8 @@ class ContactEdit(wx.Panel):
         
         fgSizer31.Add(self.m_staticText55, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.phone = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
-        fgSizer31.Add(self.phone, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_phone = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        fgSizer31.Add(self.p_phone, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText551 = wx.StaticText(self, wx.ID_ANY, u"Mobile", wx.DefaultPosition, wx.DefaultSize,
                                              wx.ALIGN_LEFT)
@@ -1207,16 +1467,16 @@ class ContactEdit(wx.Panel):
         
         fgSizer31.Add(self.m_staticText551, 0, wx.ALL, 5)
         
-        self.mobile = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
-        fgSizer31.Add(self.mobile, 0, wx.ALL | wx.EXPAND, 5)
+        self.p_mobile = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        fgSizer31.Add(self.p_mobile, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText70 = wx.StaticText(self, wx.ID_ANY, u"e-mail", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText70.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText70, 0, wx.ALL, 5)
         
-        self.email = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
-        fgSizer31.Add(self.email, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_email = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        fgSizer31.Add(self.p_email, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer49.Add(fgSizer31, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -1231,13 +1491,14 @@ class ContactEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -1248,26 +1509,32 @@ class ContactEdit(wx.Panel):
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_supplier)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_parent(self, event):
+    def lookup_supplier(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -1283,13 +1550,14 @@ class CardEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.header = wx.StaticText(self, wx.ID_ANY, u"Card Details", wx.DefaultPosition, wx.DefaultSize,
-                                    wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.header.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Card Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.header.SetFont(wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_header.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1301,28 +1569,28 @@ class CardEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText61, 0, wx.ALL, 5)
         
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer2.Add(self.parent, 0, wx.ALL | wx.EXPAND, 5)
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer2.Add(self.p_parent, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Card Name", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"Card Number", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"Card Long Number", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText11.Wrap(-1)
         
         fgSizer2.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.number = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.number.SetMaxLength(16)
-        fgSizer2.Add(self.number, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_long_number = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_long_number.SetMaxLength(16)
+        fgSizer2.Add(self.p_long_number, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -1337,11 +1605,11 @@ class CardEdit(wx.Panel):
         fgSizer14.SetFlexibleDirection(wx.BOTH)
         fgSizer14.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
         
-        typeChoices = [u"Credit Card", u"Debit Card", u"Store Card"]
-        self.type = wx.RadioBox(self, wx.ID_ANY, u"Card Type", wx.DefaultPosition, wx.DefaultSize, typeChoices, 1,
-                                wx.RA_SPECIFY_ROWS)
-        self.type.SetSelection(0)
-        fgSizer14.Add(self.type, 0, wx.ALIGN_BOTTOM | wx.ALL | wx.EXPAND, 5)
+        p_typeChoices = [u"Credit Card", u"Debit Card", u"Store Card"]
+        self.p_type = wx.RadioBox(self, wx.ID_ANY, u"Card Type", wx.DefaultPosition, wx.DefaultSize, p_typeChoices, 1,
+                                  wx.RA_SPECIFY_ROWS)
+        self.p_type.SetSelection(0)
+        fgSizer14.Add(self.p_type, 0, wx.ALIGN_BOTTOM | wx.ALL | wx.EXPAND, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -1361,13 +1629,14 @@ class CardEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -1378,26 +1647,32 @@ class CardEdit(wx.Panel):
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_parent)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_parent(self, event):
+    def lookup_account(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
+    def on_end_date(self, event):
         event.Skip()
 
 
@@ -1413,13 +1688,14 @@ class RulesEdit(wx.Panel):
         
         bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.header = wx.StaticText(self, wx.ID_ANY, u"Rule Details", wx.DefaultPosition, wx.DefaultSize,
-                                    wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.header.Wrap(-1)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Rule Details", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
+        self.p_header.Wrap(-1)
         
-        self.header.SetFont(wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_header.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         
-        bSizer_top.Add(self.header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1431,9 +1707,9 @@ class RulesEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText1, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.name.SetMaxLength(80)
-        fgSizer2.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
+        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
+        self.p_name.SetMaxLength(80)
+        fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
@@ -1452,20 +1728,20 @@ class RulesEdit(wx.Panel):
         
         fgSizer14.Add(self.m_staticText74, 0, wx.ALL, 5)
         
-        self.initial = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                         wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.initial.SetDigits(4)
-        fgSizer14.Add(self.initial, 0, wx.ALL, 5)
+        self.p_credit_pc = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                             wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_credit_pc.SetDigits(4)
+        fgSizer14.Add(self.p_credit_pc, 0, wx.ALL, 5)
         
         self.m_staticText741 = wx.StaticText(self, wx.ID_ANY, u"Debit %", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText741.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText741, 0, wx.ALL, 5)
         
-        self.commission = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+        self.p_debit_pc = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                             wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0.000000, 0.01)
-        self.commission.SetDigits(4)
-        fgSizer14.Add(self.commission, 0, wx.ALL, 5)
+        self.p_debit_pc.SetDigits(4)
+        fgSizer14.Add(self.p_debit_pc, 0, wx.ALL, 5)
         
         self.m_staticText7411 = wx.StaticText(self, wx.ID_ANY, u"Minimum Payment", wx.DefaultPosition, wx.DefaultSize,
                                               0)
@@ -1473,30 +1749,30 @@ class RulesEdit(wx.Panel):
         
         fgSizer14.Add(self.m_staticText7411, 0, wx.ALL, 5)
         
-        self.rate = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.rate.SetDigits(2)
-        fgSizer14.Add(self.rate, 0, wx.ALL, 5)
+        self.p_minimum_pay = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                               wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_minimum_pay.SetDigits(2)
+        fgSizer14.Add(self.p_minimum_pay, 0, wx.ALL, 5)
         
         self.m_staticText74111 = wx.StaticText(self, wx.ID_ANY, u"Minimum %", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText74111.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText74111, 0, wx.ALL, 5)
         
-        self.rate1 = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                       wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.rate1.SetDigits(2)
-        fgSizer14.Add(self.rate1, 0, wx.ALL, 5)
+        self.p_minimum_pc = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                              wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_minimum_pc.SetDigits(2)
+        fgSizer14.Add(self.p_minimum_pc, 0, wx.ALL, 5)
         
         self.m_staticText741111 = wx.StaticText(self, wx.ID_ANY, u"Credit Limit", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText741111.Wrap(-1)
         
         fgSizer14.Add(self.m_staticText741111, 0, wx.ALL, 5)
         
-        self.rate11 = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                        wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
-        self.rate11.SetDigits(2)
-        fgSizer14.Add(self.rate11, 0, wx.ALL, 5)
+        self.p_limit = wx.SpinCtrlDouble(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                         wx.ALIGN_RIGHT | wx.SP_ARROW_KEYS, -1e+06, 1e+06, 0, 0.01)
+        self.p_limit.SetDigits(2)
+        fgSizer14.Add(self.p_limit, 0, wx.ALL, 5)
         
         bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -1514,21 +1790,21 @@ class RulesEdit(wx.Panel):
         self.m_staticText71.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALL, 10)
-
-        grandparentChoices = []
-        self.grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
-                                       grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer31.Add(self.grandparent, 1, wx.ALL | wx.EXPAND, 5)
+        
+        p_grandparentChoices = []
+        self.p_grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
+                                         p_grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer31.Add(self.p_grandparent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText61 = wx.StaticText(self, wx.ID_ANY, u"SubAccount", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText61.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText61, 0, wx.ALL, 10)
-
-        parentChoices = []
-        self.parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, parentChoices,
-                                  wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer31.Add(self.parent, 1, wx.ALL | wx.EXPAND, 5)
+        
+        p_parentChoices = []
+        self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
+                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer31.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer49.Add(fgSizer31, 1, wx.ALL | wx.EXPAND, 5)
         
@@ -1543,13 +1819,14 @@ class RulesEdit(wx.Panel):
         
         fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.date_from = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                               wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_from, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                  wx.DefaultSize,
+                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.date_to = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                             wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.date_to, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
@@ -1560,110 +1837,34 @@ class RulesEdit(wx.Panel):
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY)
+        self.p_message.Hide()
+        
+        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
         self.SetSizer(bSizer_top)
         self.Layout()
         bSizer_top.Fit(self)
-
+        
         # Connect Events
-        self.grandparent.Bind(wx.EVT_COMBOBOX, self.on_account)
-        self.parent.Bind(wx.EVT_COMBOBOX, self.on_subaccount)
-        self.date_from.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_from)
-        self.date_to.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date_to)
+        self.p_grandparent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_subaccount)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_account(self, event):
+    def lookup_account(self, event):
         event.Skip()
     
-    def on_subaccount(self, event):
+    def lookup_subaccount(self, event):
         event.Skip()
     
-    def on_date_from(self, event):
+    def on_start_date(self, event):
         event.Skip()
     
-    def on_date_to(self, event):
-        event.Skip()
-
-
-###########################################################################
-## Class Buttons
-###########################################################################
-
-class Buttons(wx.Panel):
-    
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(671, 50), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
-        wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
-        
-        bSizer5 = wx.BoxSizer(wx.HORIZONTAL)
-        
-        bSizer5.Add((0, 0), 1, wx.EXPAND, 5)
-        
-        self.new = wx.Button(self, wx.ID_ANY, u"New", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
-        self.new.SetToolTip(u"Add a New Row")
-        
-        bSizer5.Add(self.new, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
-        
-        self.edit = wx.Button(self, wx.ID_ANY, u"Edit", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
-        self.edit.Enable(False)
-        self.edit.SetToolTip(u"Edit Currently Selected Row")
-        
-        bSizer5.Add(self.edit, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
-        
-        self.reset = wx.Button(self, wx.ID_ANY, u"Reset", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
-        self.reset.Enable(False)
-        self.reset.SetToolTip(u"Reset Original Values")
-        
-        bSizer5.Add(self.reset, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
-        
-        self.apply = wx.Button(self, wx.ID_ANY, u"Apply", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
-        self.apply.Enable(False)
-        self.apply.SetToolTip(u"Save Changes")
-        
-        bSizer5.Add(self.apply, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
-        
-        self.cancel = wx.Button(self, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
-        self.cancel.Enable(False)
-        self.cancel.SetToolTip(u"Cancel Changes Without Saving")
-        
-        bSizer5.Add(self.cancel, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
-        
-        self.quit = wx.Button(self, wx.ID_ANY, u"Quit", wx.DefaultPosition, wx.DefaultSize, 0 | wx.BORDER_RAISED)
-        self.quit.SetToolTip(u"Close App")
-        
-        bSizer5.Add(self.quit, 0, wx.ALIGN_BOTTOM | wx.ALIGN_RIGHT | wx.ALL | wx.RESERVE_SPACE_EVEN_IF_HIDDEN, 5)
-        
-        self.SetSizer(bSizer5)
-        self.Layout()
-
-        # Connect Events
-        self.new.Bind(wx.EVT_BUTTON, self.on_new)
-        self.edit.Bind(wx.EVT_BUTTON, self.on_edit)
-        self.reset.Bind(wx.EVT_BUTTON, self.on_reset)
-        self.apply.Bind(wx.EVT_BUTTON, self.on_apply)
-        self.cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
-        self.quit.Bind(wx.EVT_BUTTON, self.on_quit)
-    
-    def __del__(self):
-        pass
-    
-    # Virtual event handlers, overide them in your derived class
-    def on_new(self, event):
-        event.Skip()
-    
-    def on_edit(self, event):
-        event.Skip()
-    
-    def on_reset(self, event):
-        event.Skip()
-    
-    def on_apply(self, event):
-        event.Skip()
-    
-    def on_cancel(self, event):
-        event.Skip()
-    
-    def on_quit(self, event):
+    def on_end_date(self, event):
         event.Skip()

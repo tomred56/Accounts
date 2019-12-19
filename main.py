@@ -18,9 +18,10 @@ def main():
             'contacts': [db.Contacts(), gui.Contacts]
     }
     app = wx.App()
-    mainframe = gui.BaseWindow(data, parent=None, style=wx.DEFAULT_FRAME_STYLE)
+    #    mainframe = gui.BaseWindow(data, parent=None, style=wx.DEFAULT_FRAME_STYLE)
+    mainframe = gui.BaseWindow(parent=None)
     mainframe.Show()
-    
+
     app.MainLoop()
 
 
