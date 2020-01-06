@@ -14,7 +14,7 @@ class MyTestCase(unittest.TestCase):
         self.newsort1 = self.newname1[-4:]
     
     def test_a(self):
-        a = db.Database()
+        a = db.DataTables()
         self.assertFalse(a._exists)
         self.assertFalse(a.new_instance())
         self.assertFalse(a.update_instance())
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                 print(f'number of SubCategories in 0 is {len(subcategories.rows)}')
             subcategories = TableSubCategories(parent_ref=k1)
             if not subcategories._exists:
-                print('Error reading sub-categories')
+                print('Error reading child-categories')
             else:
                 print(f'number of SubCategories in {k1} is {len(subcategories.rows)}')
                 if cycle == 2:
