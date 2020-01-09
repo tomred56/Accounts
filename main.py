@@ -1,6 +1,6 @@
 import wx
 
-import accounting_gui as gui
+import accounting_gui_tabs as gui
 
 
 def main():
