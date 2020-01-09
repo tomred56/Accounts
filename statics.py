@@ -1,5 +1,13 @@
-from datetime import date
+from datetime import datetime
 
-NOW: date = date(date.today().year, date.today().month, date.today().day)
-START_DATE: date = date(2019, 1, 1)
-END_DATE: date = date(2050, 12, 31)
+NOW: datetime = datetime(datetime.today().year, datetime.today().month, datetime.today().day)
+START_DATE: datetime = datetime(2019, 1, 1)
+END_DATE: datetime = datetime(2050, 12, 31)
+
+
+def main():
+    pass
+
+
+if __name__ == '__main__':
+    main()

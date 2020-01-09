@@ -1,6 +1,5 @@
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any, Dict
 
 import pymysql.cursors
@@ -49,6 +48,7 @@ class Database:
     _columns: Dict[str, Dict] = field(default_factory=dict)
     columns: list = field(default_factory=list)
     colcount: int = 0
+
     def __post_init__(self):
         self.table_name = self.__repr__().split('(')[0].lower()
         assert self._instantiated, f'{self.table_name} class should not be directly instantiated'
@@ -61,7 +61,8 @@ class Database:
         maria_types = [(['text', 'char', 'enum'], {'default': ''}, str),
                        (['int'], {'key': None, 'default': 0}, int),
                        (['float', 'decimal', 'double'], {'default': 0.00}, float),
-                       (['date'], {'start_date': START_DATE, 'end_date': END_DATE, 'default': date.today()}, date)]
+                       (['date'], {'start_date': START_DATE, 'end_date': END_DATE, 'default': datetime.today()},
+                        datetime)]
         for l in maria_types:
             if any(x in c_type.lower() for x in l[0]):
                 py_values['py_type'] = l[2]
@@ -70,8 +71,8 @@ class Database:
                 else:
                     if l[2] is str:
                         py_values['py_default'] = c_default.strip(' \'"')
-                    elif l[2] is date:
-                        py_values['py_default'] = date.fromisoformat(c_default.strip(' \'"'))
+                    elif l[2] is datetime:
+                        py_values['py_default'] = datetime.fromisoformat(c_default.strip(' \'"'))
                     else:
                         py_values['py_default'] = c_default
                 break
@@ -113,8 +114,8 @@ class Database:
                     v['parent_ref'] == kwargs['parent_ref']]
         else:
             return [(v['name'], v.get(f'key', '')) for v in self.rows.values()]
-    
-    def is_active(self, ref, when: date = date.today()):
+
+    def is_active(self, ref, when: datetime = datetime.today()):
         row = dict(self.rows[ref])
         if (row.get('start_date', False) and row['start_date'] > when) \
                 or (row.get('end_date', False) and row['end_date'] < when):
@@ -157,7 +158,6 @@ class Database:
                     self.records = {(0, v[f'name']): v[f'key'] for v in self._sql_results}
         if not is_valid:
             print(f'\nfetch {self._error_msg}')
-            self._error_msg = ''
         return is_valid
     
     def _insert_instance(self, **kwargs):
@@ -180,7 +180,6 @@ class Database:
                 self._count()
         if not is_valid:
             print(f'\ninsert {self.table_name}{self._error_msg}')
-            self._error_msg = ''
         return is_valid
     
     def _update_instance(self, key=0, parent=0, **kwargs):
@@ -227,11 +226,12 @@ class Database:
         bad_date = []
         for k, v in self._columns.items():
             if v['Type'] == 'date' and k in kwargs.keys():
-                date_val = date_check.match(kwargs.get(k))
-                if date_val:
-                    kwargs[k] = datetime.strptime(date_val.group(0), '%Y-%m-%d').date()
-                else:
-                    bad_date.append(f'{k};{date_val.group(0)}')
+                date_to_check = kwargs.get(k)
+                if not isinstance(date_to_check, datetime):
+                    if date_val := date_check.match(date_to_check):
+                        kwargs[k] = datetime.strptime(date_val.group(0), '%Y-%m-%d').date()
+                    else:
+                        bad_date.append(f'{k};{date_val.group(0)}')
         mistyped_parm = [k for k, v in kwargs.items() if k in self._columns.keys()
                          and not isinstance(v, self._columns[k]['py_type'])]
         if unexpected_parm or mistyped_parm or bad_date:
@@ -267,17 +267,19 @@ class Database:
     
     def _validate_insert(self, **kwargs):
         is_valid = True
-        missing_parm = [k for k, v in self._columns.items() if k not in kwargs.keys()
-                        and v['Default'] is None and k != f'key']
+        missing_parm = [k for k, v in self._columns.items()
+                        if (k not in kwargs.keys() and v['Default'] is None and k != f'key')
+                        or k == 'name' and not kwargs.get(k, None)]
         if missing_parm:
             self._error_msg += f'\nmissing parameters: {missing_parm}'
             is_valid = False
         return is_valid
-    
-    def _validate_update(self, reference, **kwargs):
+
+    def _validate_update(self, **kwargs):
         is_valid = True
-        if not isinstance(reference, int) or reference < 1 or not self.rows.get(reference):
-            missing_parm = 'Invalid reference'
+        this_key = kwargs.get('key, 0')
+        if not self.rows.get(this_key):
+            missing_parm = 'Missing key'
         elif len(kwargs) == 1 and f'key' in kwargs.keys():
             missing_parm = 'No changes found'
         else:
@@ -314,7 +316,7 @@ class Database:
                     insert_values += f'%s, '
                     if isinstance(kwargs[k], str):
                         insert_args += (f"{kwargs[k]}",)
-                    elif isinstance(kwargs[k], date):
+                    elif isinstance(kwargs[k], datetime):
                         insert_args += (f"{kwargs[k].strftime('%Y-%m-%d')}",)
                     else:
                         insert_args += (f"{str(kwargs[k])}",)
@@ -332,7 +334,7 @@ class Database:
                 update_fields += f"`{k}`=%s, "
                 if isinstance(v, str):
                     update_args += (f"'{v}'",)
-                elif isinstance(v, date):
+                elif isinstance(v, datetime):
                     update_args += (f"'{v.strftime('%Y-%m-%d')}'",)
                 else:
                     update_args += (f"'{str(v)}'",)
