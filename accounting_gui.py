@@ -30,6 +30,7 @@ class BaseWindow(wxf.MainFrame):
         
         super().__init__(*args, **kwargs)
         #        self.Bind(wx.EVT_CHAR_HOOK, self.on_key_pressed_somewhere)
+        self.summary_cell_values = []
         self.this_table_name = None
         self.this_table = None
         self.parent_table_name = None
@@ -39,7 +40,8 @@ class BaseWindow(wxf.MainFrame):
         self.__build_links()
         self.is_new = False
         self.is_edit = False
-        self.__summary_init()
+        self.__summary_calc()
+        self.__summary_refresh()
         self.__main_single_init()
         self.__rows_init()
         #        self.toolbar.ToggleTool(self.t_categories.Id, True)
@@ -83,19 +85,19 @@ class BaseWindow(wxf.MainFrame):
         self.grandparent_table = self.data.get(ANCESTORS[self.this_table_name][1], None)
         self.__rows_refresh()
         self.__main_refresh()
-    
+
     def __summary_init(self):
+    
         self.summary_sizer = wx.FlexGridSizer(0, 6, 5, 10)
         self.summary_sizer.AddGrowableCol(0)
         self.summary_sizer.AddGrowableCol(2)
         self.summary_sizer.AddGrowableCol(4)
         self.summary_sizer.SetFlexibleDirection(wx.HORIZONTAL)
         self.summary_sizer.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
-        self.summary.Add(self.summary_sizer, 0, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 10, None)
-        self.__summary_refresh()
+        self.summary.Add(self.summary_sizer, 0, wx.ALL | wx.ALIGN_CENTER, 10, None)
+
+    def __summary_calc(self):
     
-    def __summary_load(self):
-        
         a_data = self.data['accounts']
         t_data = self.data['transactions']
         values = {}
@@ -108,16 +110,19 @@ class BaseWindow(wxf.MainFrame):
                 for a_type in a_types:
                     values[a_type] = sum(v['amount'] for v in t_data.records.values()
                                          if a_data.records[v['parent']]['account_type'] == a_type)
-        layout = []
+        self.summary_cell_values = []
         for k, v in values.items():
-            layout.append((wx.StaticText(self, -1, f'{k}:', style=wx.ALIGN_RIGHT), wx.EXPAND))
-            layout.append((wx.TextCtrl(self, value=f'{v}', style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
-        self.summary_sizer.AddMany(layout)
-    
+            self.summary_cell_values.append((wx.StaticText(self, -1, f'{k}:'), wx.EXPAND))
+            self.summary_cell_values.append(
+                    (wx.TextCtrl(self, value=f'{v}', style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
+
     def __summary_refresh(self):
-        self.__summary_load()
+        self.summary.Clear()
+        self.__summary_init()
+        self.summary_sizer.AddMany(self.summary_cell_values)
+        self.summary_sizer.Layout()
         self.summary.Layout()
-    
+
     def __rows_init(self):
         self.rows_sizer = wx.grid.Grid(self)
         self.rows_sizer.CreateGrid(0, 0)
@@ -137,17 +142,19 @@ class BaseWindow(wxf.MainFrame):
         columns = self.this_table.columns
         colcount = self.this_table.colcount
         self.rows_sizer.InsertCols(0, colcount - 1)
-        
+        filter = self.this_table.get_filter()
         for i in range(1, colcount):
             self.rows_sizer.SetColLabelValue(i - 1, columns[i][0].replace('_', ' ').title())
             if columns[i][1] is int and columns[i][0] not in LOOKUPS.keys():
                 self.rows_sizer.SetColFormatNumber(i - 1)
             elif columns[i][1] is float:
                 self.rows_sizer.SetColFormatFloat(i - 1, 10, 2)
-        if my_parent:
-            self.this_table.process(parent=my_parent)
+
+        if my_parent and (len(filter) != 1 or filter.get('parent', 0) != my_parent):
+            self.this_table.process('fetch', parent=my_parent)
         else:
-            self.this_table.process()
+            if self.this_table.rowcount != len(self.this_table.rows):
+                self.this_table.process('fetch')
         self.rows_sizer.InsertRows(0, self.this_table.sel_rowcount)
         rows = self.this_table.rows
         row = 0
@@ -164,7 +171,7 @@ class BaseWindow(wxf.MainFrame):
                 col += 1
             row += 1
         self.rows_sizer.EnableEditing(False)
-        self.rows_sizer.AutoSize()
+        self.rows_sizer.AutoSizeColumns(False)
     
     def __rows_refresh(self, my_parent=0, my_grandparent=0):
         self.__rows_load(my_parent=0, my_grandparent=0)
@@ -185,9 +192,8 @@ class BaseWindow(wxf.MainFrame):
             table = self.grandparent_table
         else:
             table = self.data.get(lookup, None)
-        
-        if not table.rows:
-            table.process()
+        if table.rowcount != len(table.rows):
+            table.process('fetch')
         return dict(table.rows.get(key, {})).get('name', 'Description not found')
     
     def __main_single_init(self):
@@ -222,8 +228,6 @@ class BaseWindow(wxf.MainFrame):
     def __single_reset(self):
         
         self.single_panel.Show(True)
-        self.dates.Show(True)
-        self.dates.Layout()
         self.single_panel.Layout()
         self.single.Layout()
         self.main_single.Layout()
@@ -231,12 +235,12 @@ class BaseWindow(wxf.MainFrame):
         self.__main_refresh()
     
     def __main_refresh(self):
-        self.p_header.SetLabel(self.this_table_name.capitalize())
+        self.p_header.SetLabel(f'Table: {self.this_table_name.capitalize()}')
         self.main_sizer.Layout()
-        self.SetSizerAndFit(self.main_sizer)
-        self.Show()
         self.Layout()
+        self.SetSizerAndFit(self.main_sizer)
         self.Centre()
+        self.Show()
     
     def on_key_pressed_somewhere(self, e):
         e.Skip()
@@ -245,37 +249,7 @@ class BaseWindow(wxf.MainFrame):
         id_selected = event.GetId()
         obj = event.GetEventObject()
         self.__activate_table(obj.GetLabelText(id_selected).lower())
-    
-    def on_suppliers_tool(self, event):
-        self.__activate_table('suppliers')
-    
-    def on_contacts_tool(self, event):
-        self.__activate_table('contacts')
-    
-    def on_accounts_tool(self, event):
-        self.__activate_table('accounts')
-    
-    def on_subaccounts_tool(self, event):
-        self.__activate_table('subaccounts')
-    
-    def on_transactions_tool(self, event):
-        self.__activate_table('transactions')
-    
-    def on_cards_tool(self, event):
-        self.__activate_table('cards')
-    
-    def on_rules_tool(self, event):
-        self.__activate_table('rules')
-    
-    def on_categories_tool(self, event):
-        self.__activate_table('categories')
-    
-    def on_subcategories_tool(self, event):
-        self.__activate_table('subcategories')
-    
-    def on_details_tool(self, event):
-        self.__activate_table('details')
-    
+
     def on_forecast_tool(self, event):
         self.set_message('No action define for this button')
     
@@ -331,6 +305,7 @@ class BaseWindow(wxf.MainFrame):
         self.is_edit = False
         self.set_message('', message='')
         self.main_menu.EnableTop(1, True)
+        self.__summary_refresh()
         self.__rows_refresh()
         self.main_sizer.Show(self.single, False, True)
         self.main_sizer.Show(self.rows, True, True)
@@ -341,12 +316,12 @@ class BaseWindow(wxf.MainFrame):
     
     def set_message(self, status='', field=1, message=None):
         self.SetStatusText(status, field)
-        if isinstance(message, str) and hasattr(self.single_panel, 'p_message'):
-            self.single_panel.p_message.SetValue(message)
+        if isinstance(message, str):
+            self.p_message.SetValue(message)
             if message:
-                self.single_panel.p_message.Show()
+                self.p_message.Show()
             else:
-                self.single_panel.p_message.Show(False)
+                self.p_message.Hide()
         self.single_panel.bSizer_top.Layout()
         self.single_panel.SetSizerAndFit(self.single_panel.bSizer_top)
         self.__single_reset()
@@ -382,12 +357,12 @@ class GenericPanelActions:
         min_date = START_DATE
         max_date = END_DATE
         if 'grandparent' in self.this_panel.keys():
-            self.set_combo('grandparent', table=self.grandparent_table)
+            self.set_combo('grandparent', table=self.grandparent_table, child_table=self.parent_table)
             for value in range(0, len(self.lookup_lists['grandparent'])):
-                if self.set_combo('parent', table=self.parent_table, parent=self.lookup_lists['grandparent'][value]):
-                    if parent_row := self.this_table.rows.get([self.lookup_lists['parent'][0]], None):
-                        min_date = parent_row['start_date']
-                        max_date = parent_row['end_date']
+                if self.set_combo('parent', table=self.parent_table, parent=self.lookup_lists['grandparent'][0]):
+                    if parent_row := self.lookup_lists['parent'][0]:
+                        min_date = self.parent_table.rows[parent_row]['start_date']
+                        max_date = self.parent_table.rows[parent_row]['end_date']
                     break
         elif 'parent' in self.this_panel.keys():
             self.set_combo('parent', table=self.parent_table)
@@ -447,8 +422,8 @@ class GenericPanelActions:
             max_date = dict(self.this_table.rows[self.lookup_lists['grandparent'][0]])['end_date']
         elif 'parent' in self.this_panel.keys():
             self.set_combo('parent', table=self.parent_table, key=row['parent'])
-            min_date = dict(self.this_table.rows[self.lookup_lists['grandparent']])['start_date']
-            max_date = dict(self.this_table.rows[self.lookup_lists['grandparent']])['end_date']
+            min_date = dict(self.this_table.rows[self.lookup_lists['parent'][0]])['start_date']
+            max_date = dict(self.this_table.rows[self.lookup_lists['parent'][0]])['end_date']
         elif 'categories' in self.this_panel.keys():
             self.set_combo('categories', key=row['category'])
             self.set_combo('subcategories', key=row['subcategory'])
@@ -521,6 +496,7 @@ class GenericPanelActions:
                 action = 'update'
             if is_valid := self.this_table.process(action, **new_data):
                 self.base.set_message(f'Successful {action}', message='')
+                self.this_table.process('fetch')
             else:
                 self.base.set_message('Error detected', message=self.this_table.get_message())
         
@@ -529,11 +505,20 @@ class GenericPanelActions:
     def set_combo(self, field_name, table=None, child_table=None, parent=0, key=0):
         if not table:
             table = self.base.data[field_name]
+        if table.rowcount != len(table.rows):
+            table.process('fetch')
+        if child_table and child_table.rowcount != len(child_table.rows):
+            child_table.process('fetch')
         combo_list = {}
-        for test_key, row in (d := {k: v for k, v in table.rows.items() if not parent or parent == v[parent]}).items():
-            if child_table and child_table.process(parent=test_key) and not child_table.sel_rowcount:
-                continue
-            combo_list[row['name']] = row['key']
+        for test_key, row in (
+        d := {k: v for k, v in table.rows.items() if not parent or parent == v['parent']}).items():
+            #            if child_table and child_table.process(parent=test_key) and not child_table.sel_rowcount:
+            if child_table:
+                for child_row in (
+                        d1 := {k: v for k, v in child_table.rows.items() if test_key == v['parent']}).values():
+                    combo_list[row['name']] = row['key']
+            else:
+                combo_list[row['name']] = row['key']
         field = getattr(self, f'p_{field_name}')
         field.Set(list(combo_list.keys()))
         field.Select(0)
@@ -547,16 +532,35 @@ class GenericPanelActions:
         field_name = combo.Name
         field = getattr(self, f'p_{field_name}')
         if field_name == 'grandparent':
-            self.lookup_lists['grandparent'][0] = self.lookup_lists['grandparent'][1][field.GetValue()]
-            for value in range(0, len(self.lookup_lists['grandparent'])):
-                if self.set_combo('parent', table=self.parent_table, parent=self.lookup_lists['grandparent'][value]):
-                    field_start = getattr(self, 'p_start_date')
-                    field_start.SetRange()
-                    field_end = getattr(self, 'p_end_date')
-                    field_end.SetRange()
-                    break
+            grandparent_row = self.lookup_lists['grandparent'][0] = self.lookup_lists['grandparent'][1][
+                field.GetValue()]
+            self.set_combo('parent', table=self.parent_table, parent=self.lookup_lists['grandparent'][0])
+            min_date = self.grandparent_table.rows[grandparent_row]['start_date']
+            max_date = self.grandparent_table.rows[grandparent_row]['end_date']
+            if parent_row := self.lookup_lists['parent'][0]:
+                min_date = self.parent_table.rows[parent_row]['start_date']
+                max_date = self.parent_table.rows[parent_row]['end_date']
+            field_start = getattr(self, 'p_start_date')
+            field_value = field_start.GetValue()
+            field_start.SetValue(max(field_value, min_date))
+            field_start.SetRange(min_date, max_date)
+            field_end = getattr(self, 'p_end_date')
+            field_value = field_end.GetValue()
+            field_end.SetValue(min(field_value, max_date))
+            field_end.SetRange(min_date, max_date)
         elif field_name == 'parent':
             self.lookup_lists['parent'][0] = self.lookup_lists['parent'][1][field.GetValue()]
+            if parent_row := self.lookup_lists['parent'][0]:
+                min_date = self.parent_table.rows[parent_row]['start_date']
+                max_date = self.parent_table.rows[parent_row]['end_date']
+                field_start = getattr(self, 'p_start_date')
+                field_value = field_start.GetValue()
+                field_start.SetValue(max(field_value, min_date))
+                field_start.SetRange(min_date, max_date)
+                field_end = getattr(self, 'p_end_date')
+                field_value = field_end.GetValue()
+                field_end.SetValue(min(field_value, max_date))
+                field_end.SetRange(min_date, max_date)
         elif field_name == 'categories':
             self.lookup_lists['categories'][0] = self.lookup_lists['categories'][1][field.GetValue()]
             for value in range(0, len(self.lookup_lists['categories'])):

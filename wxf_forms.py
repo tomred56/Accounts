@@ -22,11 +22,11 @@ class MainFrame(wx.Frame):
     
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"Manage My Accounts", pos=wx.DefaultPosition,
-                          size=wx.Size(-1, -1), style=wx.DEFAULT_FRAME_STYLE | wx.MAXIMIZE | wx.TAB_TRAVERSAL)
+                          size=wx.Size(-1, -1), style=wx.DEFAULT_FRAME_STYLE | wx.BORDER_THEME | wx.TAB_TRAVERSAL)
         
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
-        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
-        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
+        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
         
         self.main_menu = wx.MenuBar(0)
         self.file_menu = wx.Menu()
@@ -73,75 +73,47 @@ class MainFrame(wx.Frame):
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.p_summary = wx.StaticText(self, wx.ID_ANY, u"Summary", wx.DefaultPosition, wx.DefaultSize,
-                                       wx.ALIGN_LEFT | wx.BORDER_THEME)
+                                       wx.ALIGN_LEFT | wx.BORDER_SIMPLE)
         self.p_summary.Wrap(-1)
         
         self.p_summary.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_summary.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
         self.p_summary.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
         
-        self.main_sizer.Add(self.p_summary, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 5)
+        self.main_sizer.Add(self.p_summary, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 5)
         
         self.summary = wx.BoxSizer(wx.VERTICAL)
         
-        self.main_sizer.Add(self.summary, 0, wx.EXPAND, 5)
+        self.main_sizer.Add(self.summary, 0, wx.ALIGN_LEFT, 5)
         
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Heading", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_THEME)
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Table: ", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_SIMPLE)
         self.p_header.Wrap(-1)
         
         self.p_header.SetFont(
             wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
         self.p_header.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
         
-        self.main_sizer.Add(self.p_header, 0, wx.ALIGN_CENTER_VERTICAL | wx.EXPAND, 5)
+        self.main_sizer.Add(self.p_header, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 5)
         
         self.main_single = wx.BoxSizer(wx.VERTICAL)
-        
-        self.dates = wx.FlexGridSizer(0, 5, 0, 0)
-        self.dates.AddGrowableCol(4)
-        self.dates.SetFlexibleDirection(wx.HORIZONTAL)
-        self.dates.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
-        
-        self.m_staticText51 = wx.StaticText(self, wx.ID_ANY, u"Dates Active", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.m_staticText51.Wrap(-1)
-        
-        self.dates.Add(self.m_staticText51, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
-        
-        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
-                                                  wx.DefaultSize,
-                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        self.dates.Add(self.p_start_date, 0, wx.ALIGN_LEFT | wx.ALL, 10)
-        
-        self.m_staticText511 = wx.StaticText(self, wx.ID_ANY, u"to", wx.DefaultPosition, wx.DefaultSize,
-                                             wx.ALIGN_CENTER_HORIZONTAL)
-        self.m_staticText511.Wrap(-1)
-        
-        self.dates.Add(self.m_staticText511, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
-        
-        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
-                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        self.dates.Add(self.p_end_date, 0, wx.ALIGN_LEFT | wx.ALL, 10)
-        
-        self.dates.Add((0, 0), 1, wx.EXPAND, 5)
-        
-        self.main_single.Add(self.dates, 1, wx.EXPAND, 5)
         
         self.single = wx.BoxSizer(wx.VERTICAL)
         
         self.main_single.Add(self.single, 1, wx.EXPAND, 5)
         
-        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                     wx.TE_MULTILINE | wx.TE_READONLY)
-        self.p_message.Hide()
-        
-        self.main_single.Add(self.p_message, 0, wx.ALIGN_BOTTOM | wx.ALL, 5)
-        
-        self.main_sizer.Add(self.main_single, 1, wx.EXPAND, 5)
+        self.main_sizer.Add(self.main_single, 1, wx.ALL | wx.EXPAND, 5)
         
         self.rows = wx.BoxSizer(wx.VERTICAL)
         
-        self.main_sizer.Add(self.rows, 1, wx.EXPAND, 5)
+        self.main_sizer.Add(self.rows, 1, wx.EXPAND, 0)
+        
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE)
+        self.p_message.Hide()
+        
+        self.main_sizer.Add(self.p_message, 0, wx.ALIGN_TOP | wx.ALL | wx.EXPAND, 5)
         
         self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -208,8 +180,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.categories.GetId())
         self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.subcategories.GetId())
         self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.details.GetId())
-        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
-        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
         self.b_new.Bind(wx.EVT_BUTTON, self.on_new_button)
         self.b_edit.Bind(wx.EVT_BUTTON, self.on_edit_button)
         self.b_reset.Bind(wx.EVT_BUTTON, self.on_reset_button)
@@ -225,12 +195,6 @@ class MainFrame(wx.Frame):
         event.Skip()
     
     def on_table_selected(self, event):
-        event.Skip()
-    
-    def on_start_date(self, event):
-        event.Skip()
-    
-    def on_end_date(self, event):
         event.Skip()
     
     def on_new_button(self, event):
@@ -256,20 +220,16 @@ class MainFrame(wx.Frame):
 
 class SupplierEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"suppliers"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"suppliers"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
+        self.SetFont(
+            wx.Font(wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL,
+                    False, wx.EmptyString))
+        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Supplier Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -416,20 +376,11 @@ class SupplierEdit(wx.Panel):
 
 class AccountEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"accounts"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"accounts"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Account Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -622,20 +573,11 @@ class AccountEdit(wx.Panel):
 
 class CategoryEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"categories"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"categories"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Category Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer21 = wx.FlexGridSizer(1, 2, 0, 0)
         fgSizer21.AddGrowableCol(1)
@@ -735,20 +677,11 @@ class CategoryEdit(wx.Panel):
 
 class SubCatEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"subcategories"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"subcategories"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Subcategory Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -858,20 +791,11 @@ class SubCatEdit(wx.Panel):
 
 class DetailEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"details"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"details"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Detail Information", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -993,20 +917,11 @@ class DetailEdit(wx.Panel):
 
 class TransactionEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"transactions"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"transactions"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Transaction Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer23 = wx.FlexGridSizer(0, 7, 0, 0)
         fgSizer23.AddGrowableCol(1)
@@ -1244,20 +1159,11 @@ class TransactionEdit(wx.Panel):
 
 class SubAccountEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"subaccounts"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"subaccounts"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"SubAccount Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1406,20 +1312,11 @@ class SubAccountEdit(wx.Panel):
 
 class ContactEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"contacts"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"contacts"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Contact Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1571,20 +1468,11 @@ class ContactEdit(wx.Panel):
 
 class CardEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"cards"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"cards"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Card Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1709,20 +1597,11 @@ class CardEdit(wx.Panel):
 
 class RulesEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=u"rules"):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"rules"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
         self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Rule Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        self.bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)

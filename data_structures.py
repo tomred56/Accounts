@@ -44,8 +44,8 @@ def __get_structure():
                 child[row['parent']] = ()
                 child[row['parent']] += (row['key'],)
     for row in structures:
-        _T_STRUCTURE[row['table']] = (row['key'], row['parent'], child.get(row['key'], ()), row['table'].title())
-        _K_STRUCTURE[row['key']] = (row['table'], row['parent'], child.get(row['key'], ()), row['table'].title())
+        _T_STRUCTURE[row['table']] = (row['key'], row['parent'], child.get(row['key'], ()), row['class'])
+        _K_STRUCTURE[row['key']] = (row['table'], row['parent'], child.get(row['key'], ()), row['class'])
     
     for k, v in _T_STRUCTURE.items():
         DESCENDANTS[k] = ()
@@ -65,7 +65,7 @@ def __get_structure():
 
 
 def __get_py(c_name, c_type, c_default) -> Dict:
-    py_values = {'py_type': Any, 'py_default': None}
+    py_values = {'py_type': Any, 'py_default': None, 'py_precision': (10,)}
     maria_types = [(['text', 'char', 'enum'], {'default': ''}, str),
                    (['int'], {'key': None, 'default': 0}, int),
                    (['float', 'decimal', 'double'], {'default': 0.00}, float),
@@ -74,6 +74,8 @@ def __get_py(c_name, c_type, c_default) -> Dict:
     for db_type in maria_types:
         if any(x in c_type.lower() for x in db_type[0]):
             py_values['py_type'] = db_type[2]
+            if db_type[2] in (float, int):
+                py_values['py_precision'] = tuple(map(int, re.findall(r'[0-9]+', c_type)))
             if c_default is None:
                 py_values['py_default'] = db_type[1].get(c_name, db_type[1]['default'])
             else:
@@ -96,7 +98,8 @@ class DataTables:
     _exists: bool = False
     _error_msg: str = ''
     table_name: str = None
-    _sql_statements = []
+    _sql_statements: list = field(default_factory=list)
+    _sql_filter: dict = field(default_factory=dict)
     _sql_results: list = field(default_factory=list)
     rows: Dict[int, Dict] = field(default_factory=dict)
     records: Dict[str, int] = field(default_factory=dict)
@@ -152,6 +155,9 @@ class DataTables:
     
     def get_list(self, parent=0):
         return {k[1]: v for k, v in self.records.items() if k[0] == parent}
+    
+    def get_filter(self):
+        return self._sql_filter
     
     def get_descriptions(self, key=0, parent=0):
         if key:
@@ -212,7 +218,6 @@ class DataTables:
         if is_valid := self._validate('insert', **kwargs):
             if is_valid := self._insert_sql(**kwargs):
                 if is_valid := self._execute_sql('insert'):
-                    print(f'insert.fetch {self._sql_results}')
                     if 'parent' in kwargs.keys():
                         is_valid = self.__fetch(name=kwargs['name'], parent=kwargs.get('parent'))
                     else:
@@ -305,6 +310,7 @@ class DataTables:
     
     def _fetch_sql(self, **kwargs) -> bool:
         self._sql_statements = []
+        self._sql_filter = kwargs.copy()
         fetch_fields = '*'
         fetch_conditions = ""
         fetch_args = ()
@@ -334,7 +340,9 @@ class DataTables:
                 insert_fields += f"`{k}`, "
                 if k in kwargs.keys():
                     insert_values += f'%s, '
-                    if isinstance(kwargs[k], str):
+                    if isinstance(kwargs[k], bool):
+                        insert_args += (kwargs[k],)
+                    elif isinstance(kwargs[k], str):
                         insert_args += (f"{kwargs[k]}",)
                     elif isinstance(kwargs[k], datetime):
                         insert_args += (f"{kwargs[k].strftime('%Y-%m-%d')}",)
@@ -355,7 +363,9 @@ class DataTables:
             assert k in self._columns.keys(), f'invalid field name to update {self.table_name}, {k}'
             if v is not None:
                 update_fields += f"`{k}`=%s, "
-                if isinstance(v, str):
+                if isinstance(v, bool):
+                    update_args += (v,)
+                elif isinstance(v, str):
                     update_args += (f"{v}",)
                 elif isinstance(v, datetime):
                     update_args += (f"{v.strftime('%Y-%m-%d')}",)
@@ -380,7 +390,7 @@ class DataTables:
     
     def _cascade_sql(self, child_name, **kwargs) -> bool:
         is_valid = True
-        child_class = globals()[child_name.capitalize]
+        child_class = _T_STRUCTURE[child_name][3]
         cascade_args = {}
         for k, v in ({k1: v1 for k1, v1 in kwargs.items()
                       if k1 in ('key', 'parent', 'start_date', 'end_date',
@@ -392,61 +402,62 @@ class DataTables:
                     cascade_args['grandparent'] = v
                 elif k in ('start_date', 'end_date', 'category', 'subcategory', 'detail'):
                     cascade_args[k] = v
-        
+    
         update_fields = ''
         update_args = []
         update_condition = ''
         condition_args = []
-        if cascade_args.get('grandparent', 0):
-            update_condition = f"WHERE `grandparent` = %s AND `parent` = %s "
-            condition_args = [(cascade_args.get('grandparent', 0), cascade_args.get('parent', 0),)]
-        elif cascade_args.get('parent', 0):
-            update_condition = f"WHERE `parent` = %s "
-            condition_args = [(cascade_args.get('parent', 0),)]
-        else:
-            is_valid = False
-            self._error_msg += f'\nerror synchronising  with {child_name} table'
-        if is_valid:
-            conditions = {'start_date': '<', 'end_date': '>'}
-            brackets = {1: ' AND (', 2: ' OR ', 3: ') '}
-            date_cnt = 0
-            value_cnt = 0
-            for k, v in cascade_args.items():
-                value_cnt += 1
-                if k in ('start_date', 'end_date'):
-                    date_cnt += 1
-                    new_date = v
-                    if isinstance(v, datetime):
-                        new_date = (f"{v.strftime('%Y-%m-%d')}",)
-                    update_fields += f"`{k}`=%s, "
-                    update_args += (f"{new_date}",)
-                    update_condition += f" {brackets[date_cnt]} `{k}` {conditions[k]} %s"
-                    condition_args += (f"{new_date}",)
-                elif k == 'parent':
-                    update_fields += f"`grandparent`=%s, "
-                    update_args += (f"{str(v)}",)
-                elif k == 'grandparent':
-                    pass
-                else:
-                    update_fields += f"`{k}`=%s, "
-                    if isinstance(v, str):
-                        update_args += (f"{v}",)
-                    elif isinstance(v, datetime):
-                        update_args += (f"{v.strftime('%Y-%m-%d')}",)
-                    else:
+        if cascade_args:
+            if cascade_args.get('grandparent', 0):
+                update_condition = f"WHERE `grandparent` = %s AND `parent` = %s "
+                condition_args = [(cascade_args.get('grandparent', 0), cascade_args.get('parent', 0),)]
+            elif cascade_args.get('parent', 0):
+                update_condition = f"WHERE `parent` = %s "
+                condition_args = [(cascade_args.get('parent', 0),)]
+            else:
+                is_valid = False
+                self._error_msg += f'\nerror synchronising  with {child_name} table'
+            if is_valid:
+                conditions = {'start_date': '<', 'end_date': '>'}
+                brackets = {1: ' AND (', 2: ' OR ', 3: ') '}
+                date_cnt = 0
+                value_cnt = 0
+                for k, v in cascade_args.items():
+                    value_cnt += 1
+                    if k in ('start_date', 'end_date'):
+                        date_cnt += 1
+                        new_date = v
+                        if isinstance(v, datetime):
+                            new_date = (f"{v.strftime('%Y-%m-%d')}",)
+                        update_fields += f"`{k}`=%s, "
+                        update_args += (f"{new_date}",)
+                        update_condition += f" {brackets[date_cnt]} `{k}` {conditions[k]} %s"
+                        condition_args += (f"{new_date}",)
+                    elif k == 'parent':
+                        update_fields += f"`grandparent`=%s, "
                         update_args += (f"{str(v)}",)
+                    elif k == 'grandparent':
+                        pass
+                    else:
+                        update_fields += f"`{k}`=%s, "
+                        if isinstance(v, str):
+                            update_args += (f"{v}",)
+                        elif isinstance(v, datetime):
+                            update_args += (f"{v.strftime('%Y-%m-%d')}",)
+                        else:
+                            update_args += (f"{str(v)}",)
             
-            if date_cnt:
-                update_condition += ")"
-            if update_fields.strip(' ,'):
-                update_args += condition_args
-                update_statement = f"UPDATE {child_name} SET {update_fields.strip(' ,')} {update_condition}"
-                self._sql_statements.append([update_statement, update_args])
-                for grandchild_name in DESCENDANTS[child_name]:
-                    is_valid = self._cascade_sql(grandchild_name, **cascade_args)
-        else:
-            is_valid = False
-            self._error_msg += f'\nno changes found to action on table {self.table_name}'
+                if date_cnt:
+                    update_condition += ")"
+                if update_fields.strip(' ,'):
+                    update_args += condition_args
+                    update_statement = f"UPDATE {child_name} SET {update_fields.strip(' ,')} {update_condition}"
+                    self._sql_statements.append([update_statement, update_args])
+                    for grandchild_name in DESCENDANTS[child_name]:
+                        is_valid = self._cascade_sql(grandchild_name, **cascade_args)
+            else:
+                is_valid = False
+                self._error_msg += f'\nno changes found to action on table {self.table_name}'
         return is_valid
     
     def _execute_sql(self, action):
@@ -501,7 +512,7 @@ class DataTables:
                 if 'fetch' in action:
                     self.sel_rowcount = result
                 self._sql_results = cursor.fetchall()
-            print(f'{action} on {self.table_name}\nresult = {result}\nfetchall = {self._sql_results}')
+            print(f'{action} on {self.table_name} : result = {result}')
             database.close()
             return is_valid
 
