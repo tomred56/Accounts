@@ -12,6 +12,7 @@ import wx.adv
 import wx.lib.masked
 import wx.xrc
 
+ID_EXIT = 1000
 
 ###########################################################################
 ## Class MainFrame
@@ -21,78 +22,98 @@ class MainFrame(wx.Frame):
     
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=u"Manage My Accounts", pos=wx.DefaultPosition,
-                          size=wx.Size(-1, -1), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+                          size=wx.Size(-1, -1), style=wx.DEFAULT_FRAME_STYLE | wx.BORDER_THEME | wx.TAB_TRAVERSAL)
         
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
+        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+        
+        self.main_menu = wx.MenuBar(0)
+        self.file_menu = wx.Menu()
+        self.exit = wx.MenuItem(self.file_menu, ID_EXIT, u"Exit" + u"\t" + u"alt-x", wx.EmptyString, wx.ITEM_NORMAL)
+        self.file_menu.Append(self.exit)
+        
+        self.main_menu.Append(self.file_menu, u"File")
+        
+        self.tables_menu = wx.Menu()
+        self.suppliers = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Suppliers", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.suppliers)
+        
+        self.contacts = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Contacts", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.contacts)
+        
+        self.accounts = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Accounts", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.accounts)
+        
+        self.subaccounts = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"SubAccounts", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.subaccounts)
+        
+        self.transactions = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Transactions", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.transactions)
+        
+        self.rules = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Rules", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.rules)
+        
+        self.cards = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Cards", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.cards)
+        
+        self.categories = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Categories", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.categories)
+        
+        self.subcategories = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"SubCategories", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.subcategories)
+        
+        self.details = wx.MenuItem(self.tables_menu, wx.ID_ANY, u"Details", wx.EmptyString, wx.ITEM_RADIO)
+        self.tables_menu.Append(self.details)
+        
+        self.main_menu.Append(self.tables_menu, u"Tables")
+        
+        self.SetMenuBar(self.main_menu)
         
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        self.tool_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.p_summary = wx.StaticText(self, wx.ID_ANY, u"Summary", wx.DefaultPosition, wx.DefaultSize,
+                                       wx.ALIGN_LEFT | wx.BORDER_SIMPLE)
+        self.p_summary.Wrap(-1)
         
-        self.toolbar = wx.ToolBar(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_TEXT)
-        self.toolbar.SetToolSeparation(1)
-        self.t_suppliers = self.toolbar.AddLabelTool(wx.ID_ANY, u"Suppliers",
-                                                     wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                     wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
+        self.p_summary.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_summary.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
+        self.p_summary.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
         
-        self.t_contacts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Contacts",
-                                                    wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                    wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_accounts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Accounts", wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY),
-                                                    wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_subaccounts = self.toolbar.AddLabelTool(wx.ID_ANY, u"SubAccounts",
-                                                       wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                       wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_transactions = self.toolbar.AddLabelTool(wx.ID_ANY, u"Transactions",
-                                                        wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                        wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_cards = self.toolbar.AddLabelTool(wx.ID_ANY, u"Cards",
-                                                 wx.Bitmap(u"System Equalizer.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                 wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_rules = self.toolbar.AddLabelTool(wx.ID_ANY, u"Rules",
-                                                 wx.Bitmap(u"System Equalizer.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                 wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_categories = self.toolbar.AddLabelTool(wx.ID_ANY, u"Categories",
-                                                      wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY),
-                                                      wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString,
-                                                      None)
-        
-        self.t_subcategories = self.toolbar.AddLabelTool(wx.ID_ANY, u"SubCategories",
-                                                         wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY),
-                                                         wx.NullBitmap, wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString,
-                                                         None)
-        
-        self.t_details = self.toolbar.AddLabelTool(wx.ID_ANY, u"Details",
-                                                   wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                   wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.t_forecasts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Forecasts",
-                                                     wx.Bitmap(u"Search.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
-                                                     wx.ITEM_NORMAL, wx.EmptyString, wx.EmptyString, None)
-        
-        self.toolbar.Realize()
-        
-        self.tool_sizer.Add(self.toolbar, 0, wx.EXPAND, 5)
-        
-        self.main_sizer.Add(self.tool_sizer, 0, wx.ALIGN_TOP | wx.EXPAND, 5)
+        self.main_sizer.Add(self.p_summary, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 5)
         
         self.summary = wx.BoxSizer(wx.VERTICAL)
         
-        self.main_sizer.Add(self.summary, 0, wx.EXPAND, 5)
+        self.main_sizer.Add(self.summary, 0, wx.ALIGN_LEFT, 5)
+        
+        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Table: ", wx.DefaultPosition, wx.DefaultSize,
+                                      wx.ALIGN_LEFT | wx.BORDER_SIMPLE)
+        self.p_header.Wrap(-1)
+        
+        self.p_header.SetFont(
+            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
+        self.p_header.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
+        
+        self.main_sizer.Add(self.p_header, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL | wx.EXPAND, 5)
+        
+        self.main_single = wx.BoxSizer(wx.VERTICAL)
         
         self.single = wx.BoxSizer(wx.VERTICAL)
         
-        self.main_sizer.Add(self.single, 0, wx.EXPAND, 5)
+        self.main_single.Add(self.single, 1, wx.EXPAND, 5)
+        
+        self.main_sizer.Add(self.main_single, 1, wx.ALL | wx.EXPAND, 5)
         
         self.rows = wx.BoxSizer(wx.VERTICAL)
         
-        self.main_sizer.Add(self.rows, 1, wx.EXPAND, 5)
+        self.main_sizer.Add(self.rows, 1, wx.EXPAND, 0)
+        
+        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE)
+        self.p_message.Hide()
+        
+        self.main_sizer.Add(self.p_message, 0, wx.ALIGN_TOP | wx.ALL | wx.EXPAND, 5)
         
         self.buttons_sizer = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -148,17 +169,17 @@ class MainFrame(wx.Frame):
         self.Centre(wx.BOTH)
         
         # Connect Events
-        self.Bind(wx.EVT_TOOL, self.on_suppliers_tool, id=self.t_suppliers.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_contacts_tool, id=self.t_contacts.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_accounts_tool, id=self.t_accounts.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_subaccounts_tool, id=self.t_subaccounts.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_transactions_tool, id=self.t_transactions.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_cards_tool, id=self.t_cards.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_rules_tool, id=self.t_rules.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_categories_tool, id=self.t_categories.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_subcategories_tool, id=self.t_subcategories.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_details_tool, id=self.t_details.GetId())
-        self.Bind(wx.EVT_TOOL, self.on_forecast_tool, id=self.t_forecasts.GetId())
+        self.Bind(wx.EVT_MENU, self.on_quit_button, id=self.exit.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.suppliers.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.contacts.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.accounts.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.subaccounts.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.transactions.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.rules.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.cards.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.categories.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.subcategories.GetId())
+        self.Bind(wx.EVT_MENU, self.on_table_selected, id=self.details.GetId())
         self.b_new.Bind(wx.EVT_BUTTON, self.on_new_button)
         self.b_edit.Bind(wx.EVT_BUTTON, self.on_edit_button)
         self.b_reset.Bind(wx.EVT_BUTTON, self.on_reset_button)
@@ -170,37 +191,10 @@ class MainFrame(wx.Frame):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_suppliers_tool(self, event):
+    def on_quit_button(self, event):
         event.Skip()
     
-    def on_contacts_tool(self, event):
-        event.Skip()
-    
-    def on_accounts_tool(self, event):
-        event.Skip()
-    
-    def on_subaccounts_tool(self, event):
-        event.Skip()
-    
-    def on_transactions_tool(self, event):
-        event.Skip()
-    
-    def on_cards_tool(self, event):
-        event.Skip()
-    
-    def on_rules_tool(self, event):
-        event.Skip()
-    
-    def on_categories_tool(self, event):
-        event.Skip()
-    
-    def on_subcategories_tool(self, event):
-        event.Skip()
-    
-    def on_details_tool(self, event):
-        event.Skip()
-    
-    def on_forecast_tool(self, event):
+    def on_table_selected(self, event):
         event.Skip()
     
     def on_new_button(self, event):
@@ -217,9 +211,7 @@ class MainFrame(wx.Frame):
     
     def on_cancel_button(self, event):
         event.Skip()
-    
-    def on_quit_button(self, event):
-        event.Skip()
+
 
 
 ###########################################################################
@@ -228,20 +220,16 @@ class MainFrame(wx.Frame):
 
 class SupplierEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"suppliers"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
+        self.SetFont(
+            wx.Font(wx.NORMAL_FONT.GetPointSize(), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL,
+                    False, wx.EmptyString))
+        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
         
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Supplier Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -267,10 +255,10 @@ class SupplierEdit(wx.Panel):
         self.p_web.SetMaxLength(80)
         fgSizer2.Add(self.p_web, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -308,7 +296,7 @@ class SupplierEdit(wx.Panel):
         self.p_email = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
         fgSizer14.Add(self.p_email, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_panels.Add(fgSizer14, 1, wx.ALL | wx.EXPAND, 5)
+        bSizer_panels.Add(fgSizer14, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticline32 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL)
         bSizer_panels.Add(self.m_staticline32, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -353,19 +341,19 @@ class SupplierEdit(wx.Panel):
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
         bSizer49.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
-        bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
+        bSizer_panels.Add(bSizer49, 0, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
@@ -388,20 +376,11 @@ class SupplierEdit(wx.Panel):
 
 class AccountEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"accounts"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Account Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -414,9 +393,10 @@ class AccountEdit(wx.Panel):
         
         fgSizer2.Add(self.m_staticText61, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_LEFT | wx.ALL, 5)
         
-        p_parentChoices = []
+        p_parentChoices = [u"Unknown"]
         self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
-                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+                                    wx.CB_DROPDOWN | wx.CB_READONLY, wx.DefaultValidator, u"parent")
+        self.p_parent.SetSelection(0)
         fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Account Name", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -438,10 +418,10 @@ class AccountEdit(wx.Panel):
         self.p_description.SetMaxLength(80)
         fgSizer2.Add(self.p_description, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -486,7 +466,7 @@ class AccountEdit(wx.Panel):
         self.p_initial.SetDigits(2)
         fgSizer14.Add(self.p_initial, 0, wx.ALL, 5)
         
-        bSizer_panels.Add(fgSizer14, 1, wx.ALL, 5)
+        bSizer_panels.Add(fgSizer14, 0, wx.ALL, 5)
         
         self.m_staticline32 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL)
         bSizer_panels.Add(self.m_staticline32, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
@@ -547,25 +527,25 @@ class AccountEdit(wx.Panel):
         
         bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
         
-        bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
+        bSizer_panels.Add(bSizer49, 0, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
-        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_supplier)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self._on_lookup)
         self.p_holder.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
         self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
         self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
@@ -574,7 +554,7 @@ class AccountEdit(wx.Panel):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def lookup_supplier(self, event):
+    def _on_lookup(self, event):
         event.Skip()
     
     def on_grandparent(self, event):
@@ -593,20 +573,11 @@ class AccountEdit(wx.Panel):
 
 class CategoryEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"categories"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Category Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer21 = wx.FlexGridSizer(1, 2, 0, 0)
         fgSizer21.AddGrowableCol(1)
@@ -622,10 +593,10 @@ class CategoryEdit(wx.Panel):
         self.p_name.SetMaxLength(80)
         fgSizer21.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer21, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        self.bSizer_top.Add(fgSizer21, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         bSizer_panels1 = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -666,20 +637,20 @@ class CategoryEdit(wx.Panel):
         
         bSizer_panels1.Add(bSizer49, 1, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels1, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels1, 0, wx.EXPAND, 5)
         
         self.m_staticline6 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALIGN_TOP | wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_name.Bind(wx.EVT_TEXT, self.on_text)
@@ -706,20 +677,11 @@ class CategoryEdit(wx.Panel):
 
 class SubCatEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"subcategories"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Subcategory Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -733,7 +695,7 @@ class SubCatEdit(wx.Panel):
         
         p_parentChoices = []
         self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
-                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+                                    wx.CB_DROPDOWN | wx.CB_READONLY, wx.DefaultValidator, u"parent")
         fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Description", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -745,10 +707,10 @@ class SubCatEdit(wx.Panel):
         self.p_name.SetMaxLength(80)
         fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.LEFT | wx.RIGHT | wx.TOP | wx.EXPAND, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -789,23 +751,23 @@ class SubCatEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.m_staticline6 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
-        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_category)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self._on_lookup)
         self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
         self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
@@ -813,7 +775,7 @@ class SubCatEdit(wx.Panel):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def lookup_category(self, event):
+    def _on_lookup(self, event):
         event.Skip()
     
     def on_start_date(self, event):
@@ -829,20 +791,11 @@ class SubCatEdit(wx.Panel):
 
 class DetailEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"details"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Detail Information", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -856,7 +809,8 @@ class DetailEdit(wx.Panel):
         
         p_grandparentChoices = []
         self.p_grandparent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
-                                         p_grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+                                         p_grandparentChoices, wx.CB_DROPDOWN | wx.CB_READONLY, wx.DefaultValidator,
+                                         u"grandparent")
         fgSizer2.Add(self.p_grandparent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText61 = wx.StaticText(self, wx.ID_ANY, u"Sub Category", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -866,7 +820,7 @@ class DetailEdit(wx.Panel):
         
         p_parentChoices = []
         self.p_parent = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_parentChoices,
-                                    wx.CB_DROPDOWN | wx.CB_READONLY)
+                                    wx.CB_DROPDOWN | wx.CB_READONLY, wx.DefaultValidator, u"parent")
         fgSizer2.Add(self.p_parent, 1, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"Description", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -878,10 +832,10 @@ class DetailEdit(wx.Panel):
         self.p_name.SetMaxLength(80)
         fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         
         self.m_staticline11 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline11, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline11, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -922,24 +876,24 @@ class DetailEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.m_staticline1 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline1, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline1, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
-        self.p_grandparent.Bind(wx.EVT_COMBOBOX, self.lookup_category)
-        self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_subcategory)
+        self.p_grandparent.Bind(wx.EVT_COMBOBOX, self._on_lookup)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self._on_lookup)
         self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
         self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
     
@@ -947,10 +901,7 @@ class DetailEdit(wx.Panel):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def lookup_category(self, event):
-        event.Skip()
-    
-    def lookup_subcategory(self, event):
+    def _on_lookup(self, event):
         event.Skip()
     
     def on_start_date(self, event):
@@ -966,20 +917,11 @@ class DetailEdit(wx.Panel):
 
 class TransactionEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"transactions"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Transaction Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer23 = wx.FlexGridSizer(0, 7, 0, 0)
         fgSizer23.AddGrowableCol(1)
@@ -1017,10 +959,10 @@ class TransactionEdit(wx.Panel):
                                       wx.CB_DROPDOWN | wx.CB_SORT)
         fgSizer23.Add(self.p_supplier, 0, wx.ALL, 10)
         
-        bSizer_top.Add(fgSizer23, 0, wx.ALIGN_BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer23, 0, wx.ALIGN_BOTTOM | wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1045,10 +987,10 @@ class TransactionEdit(wx.Panel):
         self.p_description.SetMaxLength(80)
         fgSizer2.Add(self.p_description, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -1104,43 +1046,43 @@ class TransactionEdit(wx.Panel):
         
         fgSizer31.Add(self.m_staticText71, 0, wx.ALL, 5)
         
-        p_categoryChoices = []
-        self.p_category = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_categoryChoices,
-                                      wx.CB_DROPDOWN | wx.CB_READONLY)
-        fgSizer31.Add(self.p_category, 0, wx.ALL | wx.EXPAND, 5)
+        p_categoriesChoices = []
+        self.p_categories = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
+                                        p_categoriesChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        fgSizer31.Add(self.p_categories, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText711 = wx.StaticText(self, wx.ID_ANY, u"SubCategory", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText711.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText711, 0, wx.ALL, 5)
         
-        p_subcategoryChoices = []
-        self.p_subcategory = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
-                                         p_subcategoryChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.p_subcategory.Enable(False)
+        p_subcategoriesChoices = []
+        self.p_subcategories = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize,
+                                           p_subcategoriesChoices, wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.p_subcategories.Enable(False)
         
-        fgSizer31.Add(self.p_subcategory, 0, wx.ALL | wx.EXPAND, 5)
+        fgSizer31.Add(self.p_subcategories, 0, wx.ALL | wx.EXPAND, 5)
         
         self.m_staticText7112 = wx.StaticText(self, wx.ID_ANY, u"Detail", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText7112.Wrap(-1)
         
         fgSizer31.Add(self.m_staticText7112, 0, wx.ALL, 5)
         
-        p_detailChoices = []
-        self.p_detail = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_detailChoices,
-                                    wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.p_detail.Enable(False)
+        p_detailsChoices = []
+        self.p_details = wx.ComboBox(self, wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, p_detailsChoices,
+                                     wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.p_details.Enable(False)
         
-        fgSizer31.Add(self.p_detail, 0, wx.ALL | wx.EXPAND, 5)
+        fgSizer31.Add(self.p_details, 0, wx.ALL | wx.EXPAND, 5)
         
         bSizer49.Add(fgSizer31, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.m_staticline511 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline511, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline511, 0, wx.EXPAND, 5)
         
         fgSizer86 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer86.AddGrowableCol(1)
@@ -1153,24 +1095,24 @@ class TransactionEdit(wx.Panel):
         
         fgSizer86.Add(self.m_staticText55, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.p_notes = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE)
-        self.p_notes.SetMaxLength(8)
+        self.p_notes = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                   wx.TE_MULTILINE | wx.TE_NO_VSCROLL)
         fgSizer86.Add(self.p_notes, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer86, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(fgSizer86, 0, wx.EXPAND, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_date)
@@ -1178,9 +1120,9 @@ class TransactionEdit(wx.Panel):
         self.p_grandparent.Bind(wx.EVT_COMBOBOX, self.lookup_supplier)
         self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
         self.p_type.Bind(wx.EVT_COMBOBOX, self.lookup_type)
-        self.p_category.Bind(wx.EVT_COMBOBOX, self.lookup_category)
-        self.p_subcategory.Bind(wx.EVT_COMBOBOX, self.lookup_subcategory)
-        self.p_detail.Bind(wx.EVT_COMBOBOX, self.lookup_detail)
+        self.p_categories.Bind(wx.EVT_COMBOBOX, self.lookup_category)
+        self.p_subcategories.Bind(wx.EVT_COMBOBOX, self.lookup_subcategory)
+        self.p_details.Bind(wx.EVT_COMBOBOX, self.lookup_detail)
     
     def __del__(self):
         pass
@@ -1217,20 +1159,11 @@ class TransactionEdit(wx.Panel):
 
 class SubAccountEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"subaccounts"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"SubAccount Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1266,10 +1199,10 @@ class SubAccountEdit(wx.Panel):
         self.p_description.SetMaxLength(80)
         fgSizer2.Add(self.p_description, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -1339,20 +1272,20 @@ class SubAccountEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 1, wx.ALIGN_BOTTOM, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
@@ -1379,20 +1312,11 @@ class SubAccountEdit(wx.Panel):
 
 class ContactEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"contacts"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Contact Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1418,10 +1342,10 @@ class ContactEdit(wx.Panel):
         self.p_name.SetMaxLength(80)
         fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -1504,20 +1428,20 @@ class ContactEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, 0, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, 0, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_supplier)
@@ -1544,20 +1468,11 @@ class ContactEdit(wx.Panel):
 
 class CardEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"cards"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Card Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1592,10 +1507,10 @@ class CardEdit(wx.Panel):
         self.p_long_number.SetMaxLength(16)
         fgSizer2.Add(self.p_long_number, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -1642,20 +1557,20 @@ class CardEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 0, wx.ALIGN_BOTTOM, 5)
         
-        bSizer_top.Add(bSizer_panels, 0, wx.ALIGN_BOTTOM, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.ALIGN_BOTTOM, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_parent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
@@ -1682,20 +1597,11 @@ class CardEdit(wx.Panel):
 
 class RulesEdit(wx.Panel):
     
-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1), style=wx.TAB_TRAVERSAL,
-                 name=wx.EmptyString):
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
+                 style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"rules"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        bSizer_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.p_header = wx.StaticText(self, wx.ID_ANY, u"Rule Details", wx.DefaultPosition, wx.DefaultSize,
-                                      wx.ALIGN_LEFT | wx.BORDER_RAISED)
-        self.p_header.Wrap(-1)
-        
-        self.p_header.SetFont(
-            wx.Font(11, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Arial"))
-        
-        bSizer_top.Add(self.p_header, 0, wx.ALIGN_CENTER | wx.EXPAND, 5)
+        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -1711,10 +1617,10 @@ class RulesEdit(wx.Panel):
         self.p_name.SetMaxLength(80)
         fgSizer2.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -1832,20 +1738,20 @@ class RulesEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 1, wx.EXPAND, 5)
         
-        bSizer_top.Add(bSizer_panels, 1, wx.EXPAND, 5)
+        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(bSizer_top)
+        self.SetSizer(self.bSizer_top)
         self.Layout()
-        bSizer_top.Fit(self)
+        self.bSizer_top.Fit(self)
         
         # Connect Events
         self.p_grandparent.Bind(wx.EVT_COMBOBOX, self.lookup_account)
@@ -1867,4 +1773,130 @@ class RulesEdit(wx.Panel):
         event.Skip()
     
     def on_end_date(self, event):
+        event.Skip()
+
+
+###########################################################################
+## Class StoredStuff
+###########################################################################
+
+class StoredStuff(wx.Frame):
+    
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=wx.EmptyString, pos=wx.DefaultPosition,
+                          size=wx.Size(500, 300), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.Enable(False)
+        self.Hide()
+        
+        self.tool_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        self.toolbar = wx.ToolBar(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TB_TEXT)
+        self.toolbar.SetToolSeparation(1)
+        self.toolbar.Enable(False)
+        self.toolbar.Hide()
+        
+        self.t_suppliers = self.toolbar.AddLabelTool(wx.ID_ANY, u"Suppliers",
+                                                     wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                     wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_contacts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Contacts",
+                                                    wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                    wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_accounts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Accounts", wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY),
+                                                    wx.NullBitmap, wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_subaccounts = self.toolbar.AddLabelTool(wx.ID_ANY, u"SubAccounts",
+                                                       wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                       wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_transactions = self.toolbar.AddLabelTool(wx.ID_ANY, u"Transactions",
+                                                        wx.Bitmap(u"Money.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                        wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_cards = self.toolbar.AddLabelTool(wx.ID_ANY, u"Cards",
+                                                 wx.Bitmap(u"System Equalizer.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                 wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_rules = self.toolbar.AddLabelTool(wx.ID_ANY, u"Rules",
+                                                 wx.Bitmap(u"System Equalizer.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                 wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_categories = self.toolbar.AddLabelTool(wx.ID_ANY, u"Categories",
+                                                      wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY),
+                                                      wx.NullBitmap, wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString,
+                                                      None)
+        
+        self.t_subcategories = self.toolbar.AddLabelTool(wx.ID_ANY, u"SubCategories",
+                                                         wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY),
+                                                         wx.NullBitmap, wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString,
+                                                         None)
+        
+        self.t_details = self.toolbar.AddLabelTool(wx.ID_ANY, u"Details",
+                                                   wx.Bitmap(u"Drawer Closed.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                   wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.t_forecasts = self.toolbar.AddLabelTool(wx.ID_ANY, u"Forecasts",
+                                                     wx.Bitmap(u"Search.bmp", wx.BITMAP_TYPE_ANY), wx.NullBitmap,
+                                                     wx.ITEM_RADIO, wx.EmptyString, wx.EmptyString, None)
+        
+        self.toolbar.Realize()
+        
+        self.tool_sizer.Add(self.toolbar, 0, wx.EXPAND, 5)
+        
+        self.SetSizer(self.tool_sizer)
+        self.Layout()
+        
+        self.Centre(wx.BOTH)
+        
+        # Connect Events
+        self.Bind(wx.EVT_TOOL, self.on_suppliers_tool, id=self.t_suppliers.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_contacts_tool, id=self.t_contacts.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_accounts_tool, id=self.t_accounts.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_subaccounts_tool, id=self.t_subaccounts.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_transactions_tool, id=self.t_transactions.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_cards_tool, id=self.t_cards.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_rules_tool, id=self.t_rules.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_categories_tool, id=self.t_categories.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_subcategories_tool, id=self.t_subcategories.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_details_tool, id=self.t_details.GetId())
+        self.Bind(wx.EVT_TOOL, self.on_forecast_tool, id=self.t_forecasts.GetId())
+    
+    def __del__(self):
+        pass
+    
+    # Virtual event handlers, overide them in your derived class
+    def on_suppliers_tool(self, event):
+        event.Skip()
+    
+    def on_contacts_tool(self, event):
+        event.Skip()
+    
+    def on_accounts_tool(self, event):
+        event.Skip()
+    
+    def on_subaccounts_tool(self, event):
+        event.Skip()
+    
+    def on_transactions_tool(self, event):
+        event.Skip()
+    
+    def on_cards_tool(self, event):
+        event.Skip()
+    
+    def on_rules_tool(self, event):
+        event.Skip()
+    
+    def on_categories_tool(self, event):
+        event.Skip()
+    
+    def on_subcategories_tool(self, event):
+        event.Skip()
+    
+    def on_details_tool(self, event):
+        event.Skip()
+    
+    def on_forecast_tool(self, event):
         event.Skip()
