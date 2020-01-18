@@ -12,7 +12,7 @@ _K_STRUCTURE: Dict = {}
 _ALL_COLUMNS: Dict = {}
 ANCESTORS: Dict = {}
 DESCENDANTS: Dict = {}
-_ACTIONS: tuple = ('count', 'next', 'fetch', 'fetchone', 'insert', 'update', 'delete')
+_ACTIONS: tuple = ('count', 'next', 'fetch', 'fetchone', 'insert', 'update', 'delete', 'swap')
 _AVAILABLE = False
 
 
@@ -116,8 +116,8 @@ class DataTables:
         assert self.table_name in _T_STRUCTURE.keys(), f'invalid table {self.table_name}'
         assert self.table_name in _ALL_COLUMNS.keys(), f'invalid table {self.table_name}'
         self.__initial()
-    
-    def process(self, action='fetch', **kwargs):
+
+    def process(self, action='fetch', *args, **kwargs):
         assert action in _ACTIONS, f'invalid process action requested {action}'
         is_valid = True
         self._error_msg = ''
@@ -127,6 +127,8 @@ class DataTables:
             is_valid = self.__instance_insert(**kwargs)
         elif action == 'update':
             is_valid = self.__instance_update(**kwargs)
+        elif action == 'swap':
+            is_valid = self.__instance_swap(*args)
         elif action == 'delete':
             pass
         else:
@@ -239,7 +241,25 @@ class DataTables:
             if is_valid:
                 is_valid = self._execute_sql('update')
         return is_valid
-    
+
+    def __instance_swap(self, *args):
+        is_valid = True
+        sql = []
+        for swap in args:
+            key = swap.get('key', 0)
+            if is_valid := self._validate(action='update', **swap):
+                if is_valid := self._update_sql(**swap):
+                    for child in DESCENDANTS[self.table_name]:
+                        if is_valid := self._cascade_sql(child, parent=key, **swap):
+                            for grandchild in DESCENDANTS[child]:
+                                is_valid = self._cascade_sql(grandchild, **swap)
+            for statement in self._sql_statements:
+                sql.append(statement)
+        if is_valid:
+            self._sql_statements = sql
+            is_valid = self._execute_sql('update')
+        return is_valid
+
     def _validate(self, action='', **kwargs):
         assert action in _ACTIONS, f'invalid action parameter "{action}"'
         is_valid = True
@@ -249,7 +269,7 @@ class DataTables:
         bad_date = []
         for k, v in self._columns.items():
             if v['Type'] == 'date' and k in kwargs.keys():
-                date_to_check = kwargs.get(k)
+                date_to_check = kwargs.get(k, '')
                 if not isinstance(date_to_check, datetime):
                     if date_val := date_check.match(date_to_check):
                         kwargs[k] = datetime.strptime(date_val.group(0), '%Y-%m-%d')
@@ -299,9 +319,10 @@ class DataTables:
     def _validate_update(self, **kwargs):
         this_key = kwargs.get('key', 0)
         assert self.rows.get(this_key), f'Correct key not supplied for update: {this_key}'
+        row = self.rows.get(this_key, {})
         is_valid = False
         for k, v in kwargs.items():
-            if self.rows.get(k) != v:
+            if row.get(k) != v:
                 is_valid = True
                 break
         if not is_valid:
@@ -323,9 +344,9 @@ class DataTables:
                 if count:
                     fetch_conditions += ' AND '
                     count -= 1
-        fetch_conditions += " ORDER BY sort"
+        fetch_conditions += " ORDER BY `sort`"
         #        fetch_args += ('sort',)
-        fetch_statement = f"SELECT {fetch_fields} FROM {self.table_name} {fetch_conditions}"
+        fetch_statement = f"SELECT {fetch_fields} FROM {self.table_name} {fetch_conditions} "
         self._sql_statements.append([fetch_statement, fetch_args])
         return True
     
@@ -350,7 +371,12 @@ class DataTables:
                         insert_args += (f"{str(kwargs[k])}",)
                 else:
                     insert_args += (f"{v['py_default']}",)
-        insert_statement = f"INSERT INTO {self.table_name} ({insert_fields.strip(' ,')}) VALUES ({insert_values.strip(' ,')})"
+        insert_statement = f"INSERT INTO {self.table_name} ({insert_fields.strip(' ,')}) " \
+                           f"VALUES ({insert_values.strip(' ,')})"
+        sort_statement = f"UPDATE {self.table_name} SET `sort` = `sort` + 1 WHERE `sort` >= %s AND `sort` <= %s"
+        new_sort = kwargs.get('sort', 0)
+        sort_args = (new_sort, (new_sort // 1000) * 1000 + 998)
+        self._sql_statements.append([sort_statement, sort_args])
         self._sql_statements.append([insert_statement, insert_args])
         return is_valid
     
@@ -390,11 +416,10 @@ class DataTables:
     
     def _cascade_sql(self, child_name, **kwargs) -> bool:
         is_valid = True
-        child_class = _T_STRUCTURE[child_name][3]
         cascade_args = {}
         for k, v in ({k1: v1 for k1, v1 in kwargs.items()
                       if k1 in ('key', 'parent', 'start_date', 'end_date',
-                                'category', 'subcategory', 'detail')}).items():
+                                'category', 'subcategory', 'detail', 'sort')}).items():
             if v is not None:
                 if k == 'key':
                     cascade_args['parent'] = v
@@ -464,6 +489,8 @@ class DataTables:
         assert action in _ACTIONS, f'invalid action parameter "{action}"'
         is_valid = True
         result = 0
+        count = 0
+        statement = []
         database = select_db()
         database.begin()
         cursor = database.cursor()
@@ -471,27 +498,40 @@ class DataTables:
         try:
             cursor.execute('BEGIN')
             if action == 'count':
-                result = cursor.execute(f"SELECT COUNT(`key`) AS rowcount FROM {self.table_name}")
+                count_statement = f"SELECT COUNT(`key`) AS rowcount FROM {self.table_name}"
+                count_args = ()
+                self._sql_statements = []
+                self._sql_statements.append([count_statement, count_args])
+                # result = cursor.execute(f"SELECT COUNT(`key`) AS rowcount FROM {self.table_name}")
             elif action == 'next':
-                result = cursor.execute(f"SHOW TABLE STATUS LIKE '{self.table_name}'")
-            elif action == 'fetch':
-                result = cursor.execute(self._sql_statements[0][0], self._sql_statements[0][1])
-            elif action == 'insert':
-                result = cursor.execute(self._sql_statements[0][0], self._sql_statements[0][1])
-            elif action == 'update':
-                for statement in self._sql_statements:
-                    result = cursor.execute(statement[0], statement[1])
+                next_id_statement = f"SHOW TABLE STATUS LIKE '{self.table_name}'"
+                next_id_args = ()
+                self._sql_statements = []
+                self._sql_statements.append([next_id_statement, next_id_args])
+                # result = cursor.execute(f"SHOW TABLE STATUS LIKE '{self.table_name}'")
+            elif action in ('fetch', 'insert', 'update'):
+                pass
+            #     result = cursor.execute(self._sql_statements[0][0], self._sql_statements[0][1])
+            # elif action == 'insert':
+            #     for statement in self._sql_statements:
+            #         result = cursor.execute(statement[0], statement[1])
+            # elif action == 'update':
+            #     for statement in self._sql_statements:
+            #         result = cursor.execute(statement[0], statement[1])
             else:
                 self._error_msg += f'\nunrecognised action "{action}" requested'
                 raise Exception
+            for statement in self._sql_statements:
+                count += 1
+                result = cursor.execute(statement[0], statement[1])
             database.commit()
         except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
             print(f'sql error {e.args}')
             code, msg = e.args
             if code != 1062:
-                self._error_msg += f'\nsql error: unable to carry out {action} action on table {self.table_name} \n'
-                self._error_msg += f'\t{self._sql_statements} \n'
-                self._error_msg += f'\t{code}, {msg}'
+                self._error_msg += (f'\nsql error: unable to carry out {action} action on table {self.table_name} \n'
+                                    f'\tstatement {count}/{len(self._sql_statements)}: {statement} \n'
+                                    f'\t{code}, {msg}')
             else:
                 self._error_msg += f'\n{msg}'
             is_valid = False
@@ -499,20 +539,22 @@ class DataTables:
         except Exception as exc:
             print(f'general error {exc.args}')
             self._error_msg += (f'\ngeneral error: unable to carry out {action} action on table {self.table_name}  \n'
+                                f'\tstatement {count}/{len(self._sql_statements)}: {statement} \n'
                                 f'\t{self._sql_statements} \n'
                                 f'\t{str(exc)}')
             is_valid = False
             database.rollback()
         finally:
-            if action == 'count':
-                self.rowcount = cursor.fetchall()[0]['rowcount']
-            elif action == 'next':
-                self.next_id = cursor.fetchall()[0]['Auto_increment']
-            else:
-                if 'fetch' in action:
-                    self.sel_rowcount = result
-                self._sql_results = cursor.fetchall()
-            print(f'{action} on {self.table_name} : result = {result}')
+            if is_valid:
+                if action == 'count':
+                    self.rowcount = cursor.fetchall()[0]['rowcount']
+                elif action == 'next':
+                    self.next_id = cursor.fetchall()[0]['Auto_increment']
+                else:
+                    if 'fetch' in action:
+                        self.sel_rowcount = result
+                    self._sql_results = cursor.fetchall()
+                print(f'{action} on {self.table_name} : result = {result}')
             database.close()
             return is_valid
 

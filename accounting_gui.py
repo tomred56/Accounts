@@ -74,17 +74,18 @@ class BaseWindow(wxf.MainFrame):
                 'cards': Cards(self),
                 'contacts': Contacts(self)
         }
-    
+
     def __activate_table(self, activate_this):
         assert activate_this in self.data.keys(), f'{activate_this} is not a valid table name'
-        if self.this_table_name == activate_this or self.is_edit or self.is_new:
-            return
+        #        if self.this_table_name == activate_this or self.is_edit or self.is_new:
+        #            return
         self.this_table_name = activate_this
         self.this_table = self.data.get(self.this_table_name, None)
         self.parent_table = self.data.get(ANCESTORS[self.this_table_name][0], None)
         self.grandparent_table = self.data.get(ANCESTORS[self.this_table_name][1], None)
-        self.__rows_refresh()
-        self.__main_refresh()
+
+    #        self.__rows_refresh()
+    #        self.__main_refresh()
 
     def __summary_init(self):
     
