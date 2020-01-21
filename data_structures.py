@@ -4,7 +4,8 @@ from typing import Any, Dict
 
 import pymysql.cursors
 
-from connect_db import select_db
+from reset_taxonomy_sort import _reset_taxonomy_sort
+# from connect_db import select_db
 from statics import *
 
 _T_STRUCTURE: Dict = {}
@@ -16,7 +17,30 @@ _ACTIONS: tuple = ('count', 'next', 'fetch', 'fetchone', 'insert', 'update', 'de
 _AVAILABLE = False
 
 
-def __get_structure():
+def select_db(host='', use_db='', user='', password=''):
+    message = 'connection successful'
+    is_valid = True
+    db_connect = None
+    try:
+        db_connect = pymysql.connect(host=f'{host}',
+                                     user=f'{user}',
+                                     password=f'{password}',
+                                     db=f'{use_db}',
+                                     charset='utf8mb4',
+                                     cursorclass=pymysql.cursors.DictCursor)
+    
+    except (pymysql.err.InterfaceError, pymysql.err.InternalError, pymysql.err.IntegrityError,
+            pymysql.err.ProgrammingError) as e:
+        message = f"could not initialise database:\nsql error {e.args}"
+        is_valid = False
+    except Exception as exc:
+        message = f"could not initialise database:\ngeneral error {exc.args}"
+        is_valid = False
+    
+    return is_valid, message, db_connect
+
+
+def _get_structure():
     try:
         database = select_db()
         c1 = database.cursor()
@@ -89,7 +113,7 @@ def __get_py(c_name, c_type, c_default) -> Dict:
     return py_values
 
 
-__get_structure()
+# __get_structure()
 
 
 @dataclass()
@@ -109,17 +133,20 @@ class DataTables:
     _columns: Dict[str, Dict] = field(default_factory=dict)
     columns: list = field(default_factory=list)
     colcount: int = 0
+    _action: str = ''
     
     def __post_init__(self):
         self.table_name = self.__repr__().split('(')[0].lower()
         assert self._instantiated, f'{self.table_name} class should not be directly instantiated'
         assert self.table_name in _T_STRUCTURE.keys(), f'invalid table {self.table_name}'
         assert self.table_name in _ALL_COLUMNS.keys(), f'invalid table {self.table_name}'
+        assert _AVAILABLE, f"\ncould not initialise  {self.table_name}"
         self.__initial()
 
     def process(self, action='fetch', *args, **kwargs):
         assert action in _ACTIONS, f'invalid process action requested {action}'
         is_valid = True
+        self._action = action
         self._error_msg = ''
         if action == 'fetch':
             is_valid = self.__fetch(**kwargs)
@@ -169,7 +196,7 @@ class DataTables:
                     v['parent'] == parent]
         else:
             return [v['name'] for v in self.rows.values()]
-    
+
     def is_active(self, ref, when: datetime = datetime.today()):
         row = dict(self.rows[ref])
         if (row.get('start_date', False) and row['start_date'] > when) \
@@ -177,28 +204,23 @@ class DataTables:
             return False
         else:
             return True
-    
+
     def __initial(self):
-        if _AVAILABLE:
-            self._exists = True
-            self._columns = _ALL_COLUMNS[self.table_name]
-            self.columns = [(k, v['py_type'], v['Comment']) for k, v in self._columns.items()]
-            self.colcount = len(self.columns)
-            self.__count()
-            self.__nextid()
-        else:
-            self._exists = False
-            self._error_msg += f"\ncould not initialise  {self.table_name}"
-        return _AVAILABLE
-    
+        self._exists = True
+        self._columns = _ALL_COLUMNS[self.table_name]
+        self.columns = [(k, v['py_type'], v['Comment']) for k, v in self._columns.items()]
+        self.colcount = len(self.columns)
+        self.__count()
+        self.__nextid()
+
     def __count(self):
         is_valid: bool = self._execute_sql('count')
         return is_valid
-    
+
     def __nextid(self):
         is_valid: bool = self._execute_sql('next')
         return is_valid
-    
+
     def __fetch(self, **kwargs):
         if is_valid := self._validate('fetch', **kwargs):
             if is_valid := self._fetch_sql(**kwargs):
@@ -248,16 +270,18 @@ class DataTables:
         for swap in args:
             key = swap.get('key', 0)
             if is_valid := self._validate(action='update', **swap):
-                if is_valid := self._update_sql(**swap):
-                    for child in DESCENDANTS[self.table_name]:
-                        if is_valid := self._cascade_sql(child, parent=key, **swap):
-                            for grandchild in DESCENDANTS[child]:
-                                is_valid = self._cascade_sql(grandchild, **swap)
+                # if is_valid := self._update_sql(**swap):
+                #     for child in DESCENDANTS[self.table_name]:
+                #         if is_valid := self._cascade_sql(child, parent=key, **swap):
+                #             for grandchild in DESCENDANTS[child]:
+                #                 is_valid = self._cascade_sql(grandchild, **swap)
+                is_valid = self._update_sql(**swap)
             for statement in self._sql_statements:
                 sql.append(statement)
         if is_valid:
             self._sql_statements = sql
-            is_valid = self._execute_sql('update')
+            if is_valid := self._execute_sql('update'):
+                is_valid = _reset_taxonomy_sort()
         return is_valid
 
     def _validate(self, action='', **kwargs):
@@ -419,7 +443,7 @@ class DataTables:
         cascade_args = {}
         for k, v in ({k1: v1 for k1, v1 in kwargs.items()
                       if k1 in ('key', 'parent', 'start_date', 'end_date',
-                                'category', 'subcategory', 'detail', 'sort')}).items():
+                                'category', 'subcategory', 'detail')}).items():
             if v is not None:
                 if k == 'key':
                     cascade_args['parent'] = v
@@ -500,15 +524,11 @@ class DataTables:
             if action == 'count':
                 count_statement = f"SELECT COUNT(`key`) AS rowcount FROM {self.table_name}"
                 count_args = ()
-                self._sql_statements = []
-                self._sql_statements.append([count_statement, count_args])
-                # result = cursor.execute(f"SELECT COUNT(`key`) AS rowcount FROM {self.table_name}")
+                self._sql_statements = [count_statement, count_args]
             elif action == 'next':
                 next_id_statement = f"SHOW TABLE STATUS LIKE '{self.table_name}'"
                 next_id_args = ()
-                self._sql_statements = []
-                self._sql_statements.append([next_id_statement, next_id_args])
-                # result = cursor.execute(f"SHOW TABLE STATUS LIKE '{self.table_name}'")
+                self._sql_statements = [next_id_statement, next_id_args]
             elif action in ('fetch', 'insert', 'update'):
                 pass
             #     result = cursor.execute(self._sql_statements[0][0], self._sql_statements[0][1])
