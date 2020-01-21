@@ -40,9 +40,8 @@ def select_db(host='', use_db='', user='', password=''):
     return is_valid, message, db_connect
 
 
-def _get_structure():
+def get_structure(database):
     try:
-        database = select_db()
         c1 = database.cursor()
         c1.execute('select * from structure')
         structures = c1.fetchall()

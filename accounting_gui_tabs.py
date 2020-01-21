@@ -1,5 +1,3 @@
-from typing import Dict
-
 import wx
 import wx.adv
 import wx.grid
@@ -20,8 +18,11 @@ LOOKUPS: dict = {
         'subcategory': 'subcategories',
         'detail': 'details'
 }
-ANCESTORS: Dict = db.ANCESTORS
-DESCENDANTS: Dict = db.DESCENDANTS
+
+ANCESTORS = db.ANCESTORS
+DESCENDANTS = db.DESCENDANTS
+CX_DISCONNECTED = 0
+CX_CONNECTED = 1
 TX_CLEAN = 0
 TX_EDIT = 1
 TX_ADD_PEER = 2
@@ -65,29 +66,35 @@ class BaseWindow(wxf.MainFrame):
         self.taxo_parent_branch_level = None
         self.taxo_parent_branch_data = None
         self.taxo_status = TX_CLEAN
-        
-        self.current_status = {'taxonomy': self.taxo_status}
+        self.conn_status = CX_DISCONNECTED
+
+        self.current_status = {
+                'taxonomy': self.taxo_status,
+                'connect': self.conn_status
+        }
         self.__button_refresh()
-        self.__build_links()
+        self.__build_links
         self.__notebook_init('connect')
         self.__main_refresh()
-    
+
     def __build_links(self):
-        is_valid, message,
-        db._get_structure()
-        self.data = {
-                'categories': db.Categories(),
-                'subcategories': db.SubCategories(),
-                'details': db.Details(),
-                'suppliers': db.Suppliers(),
-                'accounts': db.Accounts(),
-                'subaccounts': db.SubAccounts(),
-                'transactions': db.Transactions(),
-                'rules': db.Rules(),
-                'cards': db.Cards(),
-                'contacts': db.Contacts(),
-        }
+        if is_valid := self.on_connect_button(None):
+            self.conn_status = CX_CONNECTED
+            db.get_structure(self.database)
+            self.data = {
+                    'categories': db.Categories(),
+                    'subcategories': db.SubCategories(),
+                    'details': db.Details(),
+                    'suppliers': db.Suppliers(),
+                    'accounts': db.Accounts(),
+                    'subaccounts': db.SubAccounts(),
+                    'transactions': db.Transactions(),
+                    'rules': db.Rules(),
+                    'cards': db.Cards(),
+                    'contacts': db.Contacts(),
+            }
         self.all_tabs = {
+                'connect': self.tab_connect,
                 'suppliers': self.tab_suppliers,
                 'accounts': self.tab_accounts,
                 'taxonomy': self.tab_taxonomy,
@@ -105,6 +112,7 @@ class BaseWindow(wxf.MainFrame):
                 'cards': Cards(self),
                 'contacts': Contacts(self)
         }
+        return is_valid
     
     def on_user_logon(self, event):
         pass
