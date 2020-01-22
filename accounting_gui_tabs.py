@@ -68,37 +68,80 @@ class BaseWindow(wxf.MainFrame):
         self.taxo_status = TX_CLEAN
         self.conn_status = CX_DISCONNECTED
 
-        self.current_status = {
-                'taxonomy': self.taxo_status,
-                'connect': self.conn_status
-        }
-        self.__button_refresh()
-        self.__build_links
+        # self.current_status = {
+        #         'taxonomy': self.taxo_status,
+        #         'connect': self.conn_status
+        # }
+        # self.__button_refresh()
+        self.__build_links()
         self.__notebook_init('connect')
         self.__main_refresh()
 
     def __build_links(self):
-        if is_valid := self.on_connect_button(None):
-            self.conn_status = CX_CONNECTED
-            db.get_structure(self.database)
-            self.data = {
-                    'categories': db.Categories(),
-                    'subcategories': db.SubCategories(),
-                    'details': db.Details(),
-                    'suppliers': db.Suppliers(),
-                    'accounts': db.Accounts(),
-                    'subaccounts': db.SubAccounts(),
-                    'transactions': db.Transactions(),
-                    'rules': db.Rules(),
-                    'cards': db.Cards(),
-                    'contacts': db.Contacts(),
-            }
         self.all_tabs = {
                 'connect': self.tab_connect,
                 'suppliers': self.tab_suppliers,
                 'accounts': self.tab_accounts,
                 'taxonomy': self.tab_taxonomy,
                 'summary': self.tab_summary,
+        }
+
+    def __notebook_init(self, tab):
+        this_tab = self.p_notebook.FindPage(self.all_tabs[tab])
+        self.p_notebook.SetSelection(this_tab)
+        if self.conn_status == CX_DISCONNECTED:
+            self.on_new_page(None)
+
+    def on_changing_page(self, event):
+        this_page = self.p_notebook.GetSelection()
+        this_tab = self.p_notebook.GetPage(this_page)
+        this_label = this_tab.Name
+    
+        if this_label == 'connect':
+            if self.conn_status == CX_DISCONNECTED:
+                event.Veto()
+                self.set_message('Not connected to database')
+                self.__main_refresh()
+        elif this_label == 'taxonomy':
+            if self.taxo_status & TX_CHANGED:
+                event.Veto()
+                self.set_message('Unsaved changes on this tab')
+                self.__main_refresh()
+
+    def on_new_page(self, event):
+        this_page = self.p_notebook.GetSelection()
+        self.this_notebook_page = self.p_notebook.GetPage(this_page)
+        self.this_page_name = self.this_notebook_page.Name
+    
+        print(self.this_page_name)
+        if self.this_page_name == 'connect':
+            self.__connect_init()
+        elif self.this_page_name == 'summary':
+            self.__summary_init()
+        elif self.this_page_name == 'taxonomy':
+            self.__taxonomy_init()
+        self.__main_refresh()
+
+    def __connect_init(self):
+        self.host_name.SetValue('localhost')
+        self.use_db.SetValue('test')
+        self.user_name.SetValue('dermot')
+        self.password.SetValue('')
+        self.__button_refresh(show=('test', 'connect'), enable=('test', 'connect'))
+
+    def __connect_load(self):
+        db.get_structure(self.database)
+        self.data = {
+                'categories': db.DataTables(self.database, 'categories'),
+                'subcategories': db.DataTables(self.database, 'subcategories'),
+                'details': db.DataTables(self.database, 'details'),
+                'suppliers': db.DataTables(self.database, 'suppliers'),
+                'accounts': db.DataTables(self.database, 'accounts'),
+                'subaccounts': db.DataTables(self.database, 'subaccounts'),
+                'transactions': db.DataTables(self.database, 'transactions'),
+                'rules': db.DataTables(self.database, 'rules'),
+                'cards': db.DataTables(self.database, 'cards'),
+                'contacts': db.DataTables(self.database, 'contacts')
         }
         self.all_panels = {
                 'categories': Categories(self),
@@ -112,8 +155,7 @@ class BaseWindow(wxf.MainFrame):
                 'cards': Cards(self),
                 'contacts': Contacts(self)
         }
-        return is_valid
-    
+
     def on_user_logon(self, event):
         pass
     
@@ -147,37 +189,12 @@ class BaseWindow(wxf.MainFrame):
         self.summary_cell_values = []
         for k, v in values.items():
             self.summary_cell_values.append((wx.StaticText(self.tab_summary, -1, f'{k}:'), wx.EXPAND))
-            self.summary_cell_values.append(
-                    (wx.TextCtrl(self.tab_summary, value=f'{v}', style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
+            self.summary_cell_values.append((wx.TextCtrl(self.tab_summary, value=f'{v}',
+                                                         style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
         
         self.tab_summary.summary_sizer.Clear()
         self.tab_summary.summary_sizer.AddMany(self.summary_cell_values)
         self.tab_summary.summary_sizer.Layout()
-    
-    def __notebook_init(self, tab):
-        this_tab = self.p_notebook.FindPage(self.all_tabs[tab])
-        prev_tab = self.p_notebook.SetSelection(this_tab)
-        self.this_notebook_page = self.p_notebook.GetPage(this_tab)
-        self.this_page_name = self.this_notebook_page.Name
-    
-    def on_new_page(self, event):
-        this_tab = self.p_notebook.GetSelection()
-        self.this_notebook_page = self.p_notebook.GetPage(this_tab)
-        self.this_page_name = self.this_notebook_page.Name
-        
-        print(self.this_page_name)
-        if self.this_page_name == 'taxonomy':
-            self.__taxonomy_init()
-        elif self.this_page_name == 'summary':
-            self.__summary_init()
-        self.__main_refresh()
-    
-    def on_changing_page(self, event):
-        if status := self.current_status.get(self.this_page_name, None):
-            if status & TX_CHANGED:
-                event.Veto()
-                self.set_message('Unsaved changes on this tab')
-                self.__main_refresh()
     
     def __taxonomy_init(self):
         if not self.taxo_root:
@@ -731,21 +748,27 @@ class BaseWindow(wxf.MainFrame):
                     self.on_reset_button(None)
                 elif self.is_edit:
                     self.on_cancel_button(None)
-    
+
     def on_test_button(self, event):
-        is_valid, message, database = db.select_db(host=self.host_name, use_db=self.use_db,
-                                                   user=self.user, password=self.password)
-        database.close()
-        if is_valid:
+        is_valid, message, database = db.select_db(host=self.host_name.GetValue(),
+                                                   use_db=self.use_db.GetValue(),
+                                                   user=self.user_name.GetValue(),
+                                                   password=self.password.GetValue())
+        if database:
+            database.close()
             self.set_message(message, 1)
         else:
             self.set_message('error connecting', message=message)
         return is_valid
-    
+
     def on_connect_button(self, event):
-        is_valid, message, self.database = db.select_db(host=self.host_name, use_db=self.use_db,
-                                                        user=self.user, password=self.password)
+        is_valid, message, self.database = db.select_db(host=self.host_name.GetValue(),
+                                                        use_db=self.use_db.GetValue(),
+                                                        user=self.user_name.GetValue(),
+                                                        password=self.password.GetValue())
         if is_valid:
+            self.__connect_load()
+            self.conn_status = CX_CONNECTED
             self.set_message(message, 1)
         else:
             self.set_message('error connecting', message=message)

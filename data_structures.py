@@ -117,10 +117,11 @@ def __get_py(c_name, c_type, c_default) -> Dict:
 
 @dataclass()
 class DataTables:
+    database: Any = None
+    table_name: str = None
     _instantiated: bool = False
     _exists: bool = False
     _error_msg: str = ''
-    table_name: str = None
     _sql_statements: list = field(default_factory=list)
     _sql_filter: dict = field(default_factory=dict)
     _sql_results: list = field(default_factory=list)
@@ -135,8 +136,9 @@ class DataTables:
     _action: str = ''
     
     def __post_init__(self):
-        self.table_name = self.__repr__().split('(')[0].lower()
-        assert self._instantiated, f'{self.table_name} class should not be directly instantiated'
+        if not self.table_name:
+            self.table_name = self.__repr__().split('(')[0].lower()
+        # assert self._instantiated, f'{self.table_name} class should not be directly instantiated'
         assert self.table_name in _T_STRUCTURE.keys(), f'invalid table {self.table_name}'
         assert self.table_name in _ALL_COLUMNS.keys(), f'invalid table {self.table_name}'
         assert _AVAILABLE, f"\ncould not initialise  {self.table_name}"
@@ -514,9 +516,9 @@ class DataTables:
         result = 0
         count = 0
         statement = []
-        database = select_db()
-        database.begin()
-        cursor = database.cursor()
+        # database = select_db()
+        # database.begin()
+        cursor = self.database.cursor()
         self._sql_results = []
         try:
             cursor.execute('BEGIN')
@@ -543,7 +545,7 @@ class DataTables:
             for statement in self._sql_statements:
                 count += 1
                 result = cursor.execute(statement[0], statement[1])
-            database.commit()
+            self.database.commit()
         except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
             print(f'sql error {e.args}')
             code, msg = e.args
@@ -554,7 +556,7 @@ class DataTables:
             else:
                 self._error_msg += f'\n{msg}'
             is_valid = False
-            database.rollback()
+            self.database.rollback()
         except Exception as exc:
             print(f'general error {exc.args}')
             self._error_msg += (f'\ngeneral error: unable to carry out {action} action on table {self.table_name}  \n'
@@ -562,7 +564,7 @@ class DataTables:
                                 f'\t{self._sql_statements} \n'
                                 f'\t{str(exc)}')
             is_valid = False
-            database.rollback()
+            self.database.rollback()
         finally:
             if is_valid:
                 if action == 'count':
@@ -574,7 +576,7 @@ class DataTables:
                         self.sel_rowcount = result
                     self._sql_results = cursor.fetchall()
                 print(f'{action} on {self.table_name} : result = {result}')
-            database.close()
+            # database.close()
             return is_valid
 
 

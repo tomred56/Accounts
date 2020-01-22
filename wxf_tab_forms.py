@@ -15,7 +15,6 @@ import wx.xrc
 
 ID_EXIT = 1000
 
-
 ###########################################################################
 ## Class MainFrame
 ###########################################################################
@@ -45,7 +44,8 @@ class MainFrame(wx.Frame):
         self.main_sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.p_notebook = wx.Notebook(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
-        self.tab_connect = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        self.tab_connect = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL,
+                                    u"connect")
         tab_connect_top = wx.BoxSizer(wx.VERTICAL)
         
         tab_connect_top.Add((0, 0), 1, wx.EXPAND, 5)
@@ -97,7 +97,8 @@ class MainFrame(wx.Frame):
         self.tab_connect.Layout()
         tab_connect_top.Fit(self.tab_connect)
         self.p_notebook.AddPage(self.tab_connect, u"Connect", False)
-        self.tab_accounts = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        self.tab_accounts = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL,
+                                     u"accounts")
         tab_accounts_top = wx.BoxSizer(wx.VERTICAL)
         
         rows1 = wx.BoxSizer(wx.VERTICAL)
@@ -189,8 +190,8 @@ class MainFrame(wx.Frame):
         
         fgSizer141.Add(self.m_staticText551, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.p_sort_code = wx.lib.masked.TextCtrl(self, wx.ID_ANY, u"00-00-00", wx.DefaultPosition, wx.DefaultSize, 0,
-                                                  mask=u"##-##-##")
+        self.p_sort_code = wx.lib.masked.TextCtrl(self.tab_accounts, wx.ID_ANY, u"00-00-00", wx.DefaultPosition,
+                                                  wx.DefaultSize, 0, mask=u"##-##-##")
         self.p_sort_code.SetMaxLength(8)
         
         self.p_sort_code.SetFont(
