@@ -9,9 +9,7 @@ class MyTestCase(unittest.TestCase):
     
     def setUp(self) -> None:
         self.newname = f'test{uuid.uuid4()}'[:11]
-        self.newsort = self.newname[-4:]
         self.newname1 = f'test{uuid.uuid4()}'[:11]
-        self.newsort1 = self.newname1[-4:]
     
     def test_a(self):
         a = db.DataTables()

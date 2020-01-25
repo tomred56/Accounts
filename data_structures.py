@@ -119,7 +119,6 @@ def __get_py(c_name, c_type, c_default) -> Dict:
 class DataTables:
     database: Any = None
     table_name: str = None
-    _instantiated: bool = False
     _exists: bool = False
     _error_msg: str = ''
     _sql_statements: list = field(default_factory=list)
@@ -136,9 +135,9 @@ class DataTables:
     _action: str = ''
     
     def __post_init__(self):
-        if not self.table_name:
-            self.table_name = self.__repr__().split('(')[0].lower()
-        # assert self._instantiated, f'{self.table_name} class should not be directly instantiated'
+        assert self.database, f'no database available'
+        if not _T_STRUCTURE:
+            get_structure(self.database)
         assert self.table_name in _T_STRUCTURE.keys(), f'invalid table {self.table_name}'
         assert self.table_name in _ALL_COLUMNS.keys(), f'invalid table {self.table_name}'
         assert _AVAILABLE, f"\ncould not initialise  {self.table_name}"
@@ -561,7 +560,7 @@ class DataTables:
                 raise Exception
             for statement in self._sql_statements:
                 count += 1
-                if statement[1][0]:
+                if statement.find('%s') >= 0:
                     result += cursor.execute(statement[0], statement[1])
                 else:
                     result += cursor.execute(statement[0])
@@ -600,75 +599,3 @@ class DataTables:
                 print(f'{action} on {self.table_name} : result = {result}')
             # database.close()
             return is_valid
-
-
-@dataclass()
-class Categories(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class SubCategories(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Details(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Suppliers(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Accounts(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class SubAccounts(DataTables):
-    
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Transactions(DataTables):
-    
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Rules(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Cards(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()
-
-
-@dataclass()
-class Contacts(DataTables):
-    def __post_init__(self):
-        self._instantiated = True
-        super().__post_init__()

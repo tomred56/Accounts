@@ -4,6 +4,7 @@ import wx.grid
 import wx.lib.stattext
 
 import data_structures as db
+import wxf_dialog
 # from datetime import datetime
 import wxf_tab_forms as wxf
 from statics import *
@@ -67,17 +68,19 @@ class BaseWindow(wxf.MainFrame):
         self.taxo_parent_branch_data = None
         self.taxo_status = TX_CLEAN
         self.conn_status = CX_DISCONNECTED
-
-        # self.current_status = {
-        #         'taxonomy': self.taxo_status,
-        #         'connect': self.conn_status
-        # }
-        # self.__button_refresh()
-        self.__build_links()
+        self.connect()
         self.__notebook_init('connect')
         self.__main_refresh()
 
-    def __build_links(self):
+    def connect(self):
+        with SignInDialog(self, self) as dlg:
+            if dlg.ShowWindowModal() == wx.ID_OK:
+                # do something here
+                print('Hello')
+            else:
+                print('Goodbye')
+
+    def __notebook_init(self, tab):
         self.all_tabs = {
                 'connect': self.tab_connect,
                 'suppliers': self.tab_suppliers,
@@ -85,8 +88,6 @@ class BaseWindow(wxf.MainFrame):
                 'taxonomy': self.tab_taxonomy,
                 'summary': self.tab_summary,
         }
-
-    def __notebook_init(self, tab):
         this_tab = self.p_notebook.FindPage(self.all_tabs[tab])
         self.p_notebook.SetSelection(this_tab)
         if self.conn_status == CX_DISCONNECTED:
@@ -1079,6 +1080,43 @@ class GenericPanelActions:
         elif field_name in LOOKUPS.keys():
             self.lookup_lists[field_name][0] = self.lookup_lists[field_name][1][field.GetValue()]
 
+
+class SignInDialog(wxf_dialog.db_sign_in):
+    def __init__(self, top_win, parent):
+        super().__init__(parent)
+        self.top_win = top_win
+        self.SetEscapeId(self.b_cancel.Id)
+        self.SetAffirmativeId(self.b_connect.Id)
+    
+    def on_test_button(self, event):
+        is_valid, message, database = db.select_db(host=self.host_name.GetValue(),
+                                                   use_db=self.use_db.GetValue(),
+                                                   user=self.user_name.GetValue(),
+                                                   password=self.password.GetValue())
+        if database:
+            database.close()
+            self.message.SetValue(message)
+        else:
+            self.message.SetValue(f'error connecting\n{message}')
+        
+        return is_valid
+    
+    def on_connect_button(self, event):
+        is_valid, message, self.database = db.select_db(host=self.host_name.GetValue(),
+                                                        use_db=self.use_db.GetValue(),
+                                                        user=self.user_name.GetValue(),
+                                                        password=self.password.GetValue())
+        if is_valid:
+            self.message.SetValue(message)
+        else:
+            self.message.SetValue(f'error connecting\n{message}')
+        return is_valid
+    
+    def on_cancel_button(self, event):
+        self.top_win.on_exit_button(None)
+    
+    def on_exit_button(self, event):
+        self.top_win.on_exit_button(None)
 
 class Categories(wxf.CategoryEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):

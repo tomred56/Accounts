@@ -21,7 +21,5 @@ def select_db(host='', use_db='', user='', password=''):
     except Exception as exc:
         message = f"could not initialise database:\ngeneral error {exc.args}"
         is_valid = False
-    finally:
-        db_connect.close()
     
     return is_valid, message, db_connect
