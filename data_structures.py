@@ -47,7 +47,7 @@ def get_structure(database):
         structures = c1.fetchall()
         c1.execute('select * from columns')
         columns = c1.fetchall()
-        database.close()
+        # database.close()
     except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
         print(f"could not initialise database:\nsql error {e.args}")
         return
@@ -226,15 +226,18 @@ class DataTables:
         if is_valid := self._validate('fetch', **kwargs):
             if is_valid := self._fetch_sql(**kwargs):
                 if is_valid := self._execute_sql('fetch'):
-                    self.rows = {v[f'key']: dict(v.items()) for v in self._sql_results}
-                    if 'parent' in (self._columns.keys()):
-                        self.records = {(v['parent'], v[f'name']): v[f'key'] for v in self._sql_results}
-                    else:
-                        self.records = {(0, v[f'name']): v[f'key'] for v in self._sql_results}
+                    self.__fetch_rebuild()
         if not is_valid:
             print(f'\nfetch {self._error_msg}')
         return is_valid
-    
+
+    def __fetch_rebuild(self):
+        self.rows = {v[f'key']: dict(v.items()) for v in self._sql_results}
+        if 'parent' in (self._columns.keys()):
+            self.records = {(v['parent'], v[f'name']): v[f'key'] for v in self._sql_results}
+        else:
+            self.records = {(0, v[f'name']): v[f'key'] for v in self._sql_results}
+
     def __instance_insert(self, **kwargs):
         if self._columns.get('start_date') and not kwargs.get('start_date'):
             kwargs['start_date'] = NOW
@@ -243,6 +246,7 @@ class DataTables:
         if is_valid := self._validate('insert', **kwargs):
             if is_valid := self._insert_sql(**kwargs):
                 if is_valid := self._execute_sql('insert'):
+                    self.__fetch_rebuild()
                     if 'parent' in kwargs.keys():
                         is_valid = self.__fetch(name=kwargs['name'], parent=kwargs.get('parent'))
                     else:
@@ -262,7 +266,9 @@ class DataTables:
                         for grandchild in DESCENDANTS[child]:
                             is_valid = self._cascade_sql(grandchild, **kwargs)
             if is_valid:
-                is_valid = self._execute_sql('update')
+                if is_valid := self._execute_sql('update'):
+                    self.__fetch_rebuild()
+    
         return is_valid
 
     def __instance_swap(self, *args):
@@ -282,7 +288,8 @@ class DataTables:
         if is_valid:
             self._sql_statements = sql
             if is_valid := self._execute_sql('update'):
-                is_valid = _reset_taxonomy_sort()
+                if is_valid := _reset_taxonomy_sort(self.database):
+                    self.__fetch_rebuild()
         return is_valid
 
     def _validate(self, action='', **kwargs):
@@ -359,13 +366,13 @@ class DataTables:
         self._sql_filter = kwargs.copy()
         fetch_fields = '*'
         fetch_conditions = ""
-        fetch_args = ()
+        fetch_args = []
         if len(kwargs):
             fetch_conditions = 'WHERE '
             count = len(kwargs) - 1
             for k, v in kwargs.items():
                 fetch_conditions += f"`{k}` = %s"
-                fetch_args += (v,)
+                fetch_args.append((v,))
                 if count:
                     fetch_conditions += ' AND '
                     count -= 1
@@ -380,29 +387,33 @@ class DataTables:
         self._sql_statements = []
         insert_fields = ''
         insert_values = ''
-        insert_args = ()
+        insert_args = []
         for k, v in self._columns.items():
             if 'auto' not in v['Extra']:
                 insert_fields += f"`{k}`, "
                 if k in kwargs.keys():
                     insert_values += f'%s, '
                     if isinstance(kwargs[k], bool):
-                        insert_args += (kwargs[k],)
+                        insert_args.append((kwargs[k],))
                     elif isinstance(kwargs[k], str):
-                        insert_args += (f"{kwargs[k]}",)
+                        insert_args.append((f"{kwargs[k]}",))
                     elif isinstance(kwargs[k], datetime):
-                        insert_args += (f"{kwargs[k].strftime('%Y-%m-%d')}",)
+                        insert_args.append((f"{kwargs[k].strftime('%Y-%m-%d')}",))
                     else:
-                        insert_args += (f"{str(kwargs[k])}",)
+                        insert_args.append((f"{str(kwargs[k])}",))
                 else:
-                    insert_args += (f"{v['py_default']}",)
+                    insert_args.append((f"{v['py_default']}",))
         insert_statement = f"INSERT INTO {self.table_name} ({insert_fields.strip(' ,')}) " \
                            f"VALUES ({insert_values.strip(' ,')})"
         sort_statement = f"UPDATE {self.table_name} SET `sort` = `sort` + 1 WHERE `sort` >= %s AND `sort` <= %s"
         new_sort = kwargs.get('sort', 0)
-        sort_args = (new_sort, (new_sort // 1000) * 1000 + 998)
+        sort_args = [(new_sort,), ((new_sort // 1000) * 1000 + 998,)]
+        fetch_statement = f"SELECT * FROM {self.table_name} ORDER BY `sort`"
+        fetch_args = [('',)]
         self._sql_statements.append([sort_statement, sort_args])
         self._sql_statements.append([insert_statement, insert_args])
+        self._sql_statements.append([fetch_statement, (fetch_args,)])
+
         return is_valid
     
     def _update_sql(self, key=0, **kwargs) -> bool:
@@ -415,22 +426,25 @@ class DataTables:
             if v is not None:
                 update_fields += f"`{k}`=%s, "
                 if isinstance(v, bool):
-                    update_args += (v,)
+                    update_args.append((v,))
                 elif isinstance(v, str):
-                    update_args += (f"{v}",)
+                    update_args.append((f"{v}",))
                 elif isinstance(v, datetime):
-                    update_args += (f"{v.strftime('%Y-%m-%d')}",)
+                    update_args.append((f"{v.strftime('%Y-%m-%d')}",))
                 else:
-                    update_args += (f"{str(v)}",)
+                    update_args.append((f"{str(v)}",))
         if update_fields.strip(' ,'):
             if key:
                 update_condition = "WHERE `key` = %s"
-                update_args += (f'{key}',)
+                update_args.append((f'{key}',))
             else:
                 update_condition = ''
             update_statement = f"UPDATE {self.table_name} SET {update_fields.strip(' ,')} {update_condition}"
+            fetch_statement = f"SELECT * FROM {self.table_name} ORDER BY `sort`"
+            fetch_args = [('',)]
             self._sql_statements.append([update_statement, update_args])
-            
+            self._sql_statements.append([fetch_statement, (fetch_args,)])
+    
             for child_name in DESCENDANTS[self.table_name]:
                 is_valid = self._cascade_sql(child_name, **kwargs)
         else:
@@ -502,7 +516,10 @@ class DataTables:
                 if update_fields.strip(' ,'):
                     update_args += condition_args
                     update_statement = f"UPDATE {child_name} SET {update_fields.strip(' ,')} {update_condition}"
+                    fetch_statement = f"SELECT * FROM {child_name} ORDER BY `sort`"
+                    fetch_args = ()
                     self._sql_statements.append([update_statement, update_args])
+                    self._sql_statements.append([fetch_statement, (fetch_args,)])
                     for grandchild_name in DESCENDANTS[child_name]:
                         is_valid = self._cascade_sql(grandchild_name, **cascade_args)
             else:
@@ -524,12 +541,12 @@ class DataTables:
             cursor.execute('BEGIN')
             if action == 'count':
                 count_statement = f"SELECT COUNT(`key`) AS rowcount FROM {self.table_name}"
-                count_args = ()
-                self._sql_statements = [count_statement, count_args]
+                count_args = [('',)]
+                self._sql_statements = [[count_statement, (count_args,)]]
             elif action == 'next':
                 next_id_statement = f"SHOW TABLE STATUS LIKE '{self.table_name}'"
-                next_id_args = ()
-                self._sql_statements = [next_id_statement, next_id_args]
+                next_id_args = [('',)]
+                self._sql_statements = [[next_id_statement, (next_id_args,)]]
             elif action in ('fetch', 'insert', 'update'):
                 pass
             #     result = cursor.execute(self._sql_statements[0][0], self._sql_statements[0][1])
@@ -544,7 +561,11 @@ class DataTables:
                 raise Exception
             for statement in self._sql_statements:
                 count += 1
-                result = cursor.execute(statement[0], statement[1])
+                if statement[1][0]:
+                    result += cursor.execute(statement[0], statement[1])
+                else:
+                    result += cursor.execute(statement[0])
+
             self.database.commit()
         except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
             print(f'sql error {e.args}')
@@ -565,6 +586,7 @@ class DataTables:
                                 f'\t{str(exc)}')
             is_valid = False
             self.database.rollback()
+
         finally:
             if is_valid:
                 if action == 'count':

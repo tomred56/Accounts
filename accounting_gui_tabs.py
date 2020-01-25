@@ -127,7 +127,7 @@ class BaseWindow(wxf.MainFrame):
         self.use_db.SetValue('test')
         self.user_name.SetValue('dermot')
         self.password.SetValue('')
-        self.__button_refresh(show=('test', 'connect'), enable=('test', 'connect'))
+        self.__button_refresh(show=('test', 'connect'), enable=('test', 'connect'), focus=('connect'))
 
     def __connect_load(self):
         db.get_structure(self.database)
@@ -143,6 +143,7 @@ class BaseWindow(wxf.MainFrame):
                 'cards': db.DataTables(self.database, 'cards'),
                 'contacts': db.DataTables(self.database, 'contacts')
         }
+        self.Freeze()
         self.all_panels = {
                 'categories': Categories(self),
                 'subcategories': SubCategories(self),
@@ -155,6 +156,7 @@ class BaseWindow(wxf.MainFrame):
                 'cards': Cards(self),
                 'contacts': Contacts(self)
         }
+        self.Thaw()
 
     def on_user_logon(self, event):
         pass
@@ -656,8 +658,8 @@ class BaseWindow(wxf.MainFrame):
         self.main_single.Layout()
         self.main_sizer.Show(self.single, True, True)
         self.__main_refresh()
-    
-    def __button_refresh(self, show=(), enable=()):
+
+    def __button_refresh(self, show=(), enable=(), focus=()):
         self.b_exit.Show()
         self.b_exit.Enable()
         buttons = {
@@ -674,6 +676,8 @@ class BaseWindow(wxf.MainFrame):
                 v.Show()
                 if k in enable:
                     v.Enable()
+                    if k in focus:
+                        v.SetFocus()
             else:
                 v.Disable()
                 v.Hide()
@@ -800,6 +804,10 @@ class BaseWindow(wxf.MainFrame):
             self.is_tab_dirty = False
             self.tree_taxonomy.Unbind(wx.EVT_TREE_SEL_CHANGED)
             self.tree_taxonomy.Unbind(wx.EVT_TREE_SEL_CHANGING)
+            try:
+                self.database.close()
+            except:
+                pass
             self.Close()
     
     def set_message(self, status='', field=1, message=None):
@@ -821,6 +829,8 @@ class GenericPanelActions:
     def __init__(self, **kwargs):
         self.base = kwargs.get('base')
         self.child = kwargs.get('child')
+        self.child.Hide()
+        self.child.Freeze()
         self.table_name = self.child.Label
         self.this_table = self.base.data[self.table_name]
         self.parent_table = self.base.data.get(ANCESTORS[self.table_name][0], None)
@@ -838,7 +848,8 @@ class GenericPanelActions:
         self.these_taxonomies = {}
         self.this_taxonomy = [0, 0, 0]
         self.child.Hide()
-    
+        self.child.Thaw()
+
     def new(self, **kwargs):
         self.this_row = None
         self.this_record = 0
