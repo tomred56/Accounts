@@ -43,6 +43,7 @@ class BaseWindow(wxf.MainFrame):
         super().__init__(*args, **kwargs)
         # self.Bind(wx.EVT_CHAR_HOOK, self.on_key_pressed_somewhere)
         self.database = None
+        self.data = {}
         self.summary_cell_values = []
         self.this_table_name = None
         self.this_table = None
@@ -69,16 +70,21 @@ class BaseWindow(wxf.MainFrame):
         self.taxo_status = TX_CLEAN
         self.conn_status = CX_DISCONNECTED
         self.connect()
-        self.__notebook_init('connect')
+        self.__notebook_init('taxonomy')
         self.__main_refresh()
 
     def connect(self):
-        with SignInDialog(self, self) as dlg:
-            if dlg.ShowWindowModal() == wx.ID_OK:
-                # do something here
-                print('Hello')
+        with SignInDialog(None, self) as dlg:
+            result = dlg.ShowModal()
+            if result == wx.ID_OK:
+                self.conn_status = CX_CONNECTED
+                self.set_message('CONNECTED', 2, '')
+                self.__connect_load()
+            elif result == wx.ID_CLOSE:
+                pass
+        
             else:
-                print('Goodbye')
+                self.on_exit_button(None)
 
     def __notebook_init(self, tab):
         self.all_tabs = {
@@ -131,19 +137,7 @@ class BaseWindow(wxf.MainFrame):
         self.__button_refresh(show=('test', 'connect'), enable=('test', 'connect'), focus=('connect'))
 
     def __connect_load(self):
-        db.get_structure(self.database)
-        self.data = {
-                'categories': db.DataTables(self.database, 'categories'),
-                'subcategories': db.DataTables(self.database, 'subcategories'),
-                'details': db.DataTables(self.database, 'details'),
-                'suppliers': db.DataTables(self.database, 'suppliers'),
-                'accounts': db.DataTables(self.database, 'accounts'),
-                'subaccounts': db.DataTables(self.database, 'subaccounts'),
-                'transactions': db.DataTables(self.database, 'transactions'),
-                'rules': db.DataTables(self.database, 'rules'),
-                'cards': db.DataTables(self.database, 'cards'),
-                'contacts': db.DataTables(self.database, 'contacts')
-        }
+        # db.get_structure(self.database)
         self.Freeze()
         self.all_panels = {
                 'categories': Categories(self),
@@ -1082,41 +1076,63 @@ class GenericPanelActions:
 
 
 class SignInDialog(wxf_dialog.db_sign_in):
-    def __init__(self, top_win, parent):
+    def __init__(self, parent, top_win):
         super().__init__(parent)
         self.top_win = top_win
-        self.SetEscapeId(self.b_cancel.Id)
-        self.SetAffirmativeId(self.b_connect.Id)
+        # self.SetEscapeId(self.b_cancel.Id)
+        # self.SetAffirmativeId(self.b_connect.Id)
+        self.user_name.SetValue('dermot')
     
     def on_test_button(self, event):
         is_valid, message, database = db.select_db(host=self.host_name.GetValue(),
                                                    use_db=self.use_db.GetValue(),
                                                    user=self.user_name.GetValue(),
                                                    password=self.password.GetValue())
-        if database:
+        if is_valid:
             database.close()
-            self.message.SetValue(message)
+            self.message.SetValue('connection works')
         else:
             self.message.SetValue(f'error connecting\n{message}')
         
-        return is_valid
-    
     def on_connect_button(self, event):
         is_valid, message, self.database = db.select_db(host=self.host_name.GetValue(),
                                                         use_db=self.use_db.GetValue(),
                                                         user=self.user_name.GetValue(),
                                                         password=self.password.GetValue())
         if is_valid:
-            self.message.SetValue(message)
+            self.top_win.database = self.database
+            db.get_structure(self.database)
+            incr = 99 // (len(db._T_STRUCTURE) + 1)
+            self.progress.SetRange(100)
+            self.progress.SetValue(0)
+            for table in db._T_STRUCTURE.keys():
+                self.top_win.data[table] = db.DataTables(self.database, table)
+                self.progress.SetValue(self.progress.GetValue() + incr)
+                print(f'{self.progress.GetValue()}')
+            print(f'rc = {self.GetReturnCode()}')
+            # self.top_win.data = {table: db.DataTables(self.database, table)
+            #                             for table in db._T_STRUCTURE.keys()}
+            # self.data = {
+            #         'categories': db.DataTables(self.database, 'categories'),
+            #         'subcategories': db.DataTables(self.database, 'subcategories'),
+            #         'details': db.DataTables(self.database, 'details'),
+            #         'suppliers': db.DataTables(self.database, 'suppliers'),
+            #         'accounts': db.DataTables(self.database, 'accounts'),
+            #         'subaccounts': db.DataTables(self.database, 'subaccounts'),
+            #         'transactions': db.DataTables(self.database, 'transactions'),
+            #         'rules': db.DataTables(self.database, 'rules'),
+            #         'cards': db.DataTables(self.database, 'cards'),
+            #         'contacts': db.DataTables(self.database, 'contacts')
+            # }
+            self.EndModal(wx.ID_OK)
         else:
             self.message.SetValue(f'error connecting\n{message}')
-        return is_valid
     
     def on_cancel_button(self, event):
-        self.top_win.on_exit_button(None)
+        self.EndModal(wx.ID_CLOSE)
     
     def on_exit_button(self, event):
-        self.top_win.on_exit_button(None)
+        self.EndModal(wx.ID_CANCEL)
 
 class Categories(wxf.CategoryEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):

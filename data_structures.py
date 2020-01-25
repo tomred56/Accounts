@@ -560,7 +560,7 @@ class DataTables:
                 raise Exception
             for statement in self._sql_statements:
                 count += 1
-                if statement.find('%s') >= 0:
+                if statement[0].find('%s') >= 0:
                     result += cursor.execute(statement[0], statement[1])
                 else:
                     result += cursor.execute(statement[0])

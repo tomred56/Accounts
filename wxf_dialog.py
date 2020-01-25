@@ -10,7 +10,6 @@
 import wx
 import wx.xrc
 
-
 ###########################################################################
 ## Class db_sign_in
 ###########################################################################
@@ -35,7 +34,8 @@ class db_sign_in(wx.Dialog):
         
         fgSizer1.Add(self.m_staticText1, 0, wx.ALL, 5)
         
-        self.user_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0)
+        self.user_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_PROCESS_ENTER)
         self.user_name.SetMaxLength(32)
         fgSizer1.Add(self.user_name, 0, wx.ALL | wx.EXPAND, 5)
         
@@ -44,7 +44,8 @@ class db_sign_in(wx.Dialog):
         
         fgSizer1.Add(self.m_staticText2, 0, wx.ALL, 5)
         
-        self.password = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_PASSWORD)
+        self.password = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+                                    wx.TE_PASSWORD | wx.TE_PROCESS_ENTER)
         self.password.SetMaxLength(32)
         fgSizer1.Add(self.password, 0, wx.ALL | wx.EXPAND, 5)
         
@@ -53,7 +54,8 @@ class db_sign_in(wx.Dialog):
         
         fgSizer1.Add(self.m_staticText3, 0, wx.ALL, 5)
         
-        self.host_name = wx.TextCtrl(self, wx.ID_ANY, u"localhost", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.host_name = wx.TextCtrl(self, wx.ID_ANY, u"localhost", wx.DefaultPosition, wx.DefaultSize,
+                                     wx.TE_PROCESS_ENTER)
         self.host_name.SetMaxLength(32)
         fgSizer1.Add(self.host_name, 0, wx.ALL | wx.EXPAND, 5)
         
@@ -62,7 +64,7 @@ class db_sign_in(wx.Dialog):
         
         fgSizer1.Add(self.m_staticText4, 0, wx.ALL, 5)
         
-        self.use_db = wx.TextCtrl(self, wx.ID_ANY, u"test", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.use_db = wx.TextCtrl(self, wx.ID_ANY, u"test", wx.DefaultPosition, wx.DefaultSize, wx.TE_PROCESS_ENTER)
         self.use_db.SetMaxLength(32)
         fgSizer1.Add(self.use_db, 0, wx.ALL | wx.EXPAND, 5)
         
@@ -107,6 +109,10 @@ class db_sign_in(wx.Dialog):
         
         # Connect Events
         self.Bind(wx.EVT_CLOSE, self.on_exit_button)
+        self.user_name.Bind(wx.EVT_TEXT_ENTER, self.on_connect_button)
+        self.password.Bind(wx.EVT_TEXT_ENTER, self.on_connect_button)
+        self.host_name.Bind(wx.EVT_TEXT_ENTER, self.on_connect_button)
+        self.use_db.Bind(wx.EVT_TEXT_ENTER, self.on_connect_button)
         self.b_connect.Bind(wx.EVT_BUTTON, self.on_connect_button)
         self.b_test.Bind(wx.EVT_BUTTON, self.on_test_button)
         self.b_cancel.Bind(wx.EVT_BUTTON, self.on_cancel_button)
