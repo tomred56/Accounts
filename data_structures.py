@@ -13,7 +13,7 @@ _K_STRUCTURE: Dict = {}
 _ALL_COLUMNS: Dict = {}
 ANCESTORS: Dict = {}
 DESCENDANTS: Dict = {}
-_ACTIONS: tuple = ('count', 'next', 'fetch', 'fetchone', 'insert', 'update', 'delete', 'swap')
+_ACTIONS: tuple = ('count', 'next', 'fetch', 'fetchone', 'insert', 'update', 'delete', 'swap', 'key_list')
 _AVAILABLE = False
 
 
@@ -124,6 +124,7 @@ class DataTables:
     _sql_statements: list = field(default_factory=list)
     _sql_filter: dict = field(default_factory=dict)
     _sql_results: list = field(default_factory=list)
+    key_list: list = field(default_factory=list)
     rows: Dict[int, Dict] = field(default_factory=dict)
     records: Dict[str, int] = field(default_factory=dict)
     rowcount: int = 0
@@ -210,6 +211,8 @@ class DataTables:
         self._columns = _ALL_COLUMNS[self.table_name]
         self.columns = [(k, v['py_type'], v['Comment']) for k, v in self._columns.items()]
         self.colcount = len(self.columns)
+        self.__key_list()
+        self.__fetch()
         self.__count()
         self.__nextid()
 
@@ -219,6 +222,10 @@ class DataTables:
 
     def __nextid(self):
         is_valid: bool = self._execute_sql('next')
+        return is_valid
+
+    def __key_list(self):
+        is_valid: bool = self._execute_sql('key_list')
         return is_valid
 
     def __fetch(self, **kwargs):
@@ -270,11 +277,15 @@ class DataTables:
     
         return is_valid
 
-    def __instance_swap(self, *args):
+    def __instance_swap(self, parent, *args):
         is_valid = True
         sql = []
+        if parent:
+            self.__fetch(parent=parent)
+        else:
+            self.fetch()
         for swap in args:
-            key = swap.get('key', 0)
+            # key = swap.get('key', 0)
             if is_valid := self._validate(action='update', **swap):
                 # if is_valid := self._update_sql(**swap):
                 #     for child in DESCENDANTS[self.table_name]:
@@ -546,6 +557,10 @@ class DataTables:
                 next_id_statement = f"SHOW TABLE STATUS LIKE '{self.table_name}'"
                 next_id_args = [('',)]
                 self._sql_statements = [[next_id_statement, (next_id_args,)]]
+            elif action == 'key_list':
+                next_id_statement = f"SELECT `key` FROM {self.table_name}"
+                next_id_args = [('',)]
+                self._sql_statements = [[next_id_statement, (next_id_args,)]]
             elif action in ('fetch', 'insert', 'update'):
                 pass
             #     result = cursor.execute(self._sql_statements[0][0], self._sql_statements[0][1])
@@ -592,6 +607,9 @@ class DataTables:
                     self.rowcount = cursor.fetchall()[0]['rowcount']
                 elif action == 'next':
                     self.next_id = cursor.fetchall()[0]['Auto_increment']
+                elif action == 'key_list':
+                    key_list = cursor.fetchall()
+                    self.key_list = [row['key'] for row in key_list]
                 else:
                     if 'fetch' in action:
                         self.sel_rowcount = result

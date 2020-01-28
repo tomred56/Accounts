@@ -26,7 +26,7 @@ class db_sign_in(wx.Dialog):
         
         fgSizer1 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer1.AddGrowableCol(1)
-        fgSizer1.SetFlexibleDirection(wx.BOTH)
+        fgSizer1.SetFlexibleDirection(wx.HORIZONTAL)
         fgSizer1.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
         
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"User Name", wx.DefaultPosition, wx.DefaultSize, 0)
@@ -70,23 +70,31 @@ class db_sign_in(wx.Dialog):
         
         bSizer1.Add(fgSizer1, 1, wx.EXPAND, 5)
         
-        fgSizer2 = wx.FlexGridSizer(0, 3, 0, 0)
+        fgSizer2 = wx.FlexGridSizer(0, 4, 0, 0)
         fgSizer2.AddGrowableCol(0)
         fgSizer2.AddGrowableCol(1)
         fgSizer2.AddGrowableCol(2)
+        fgSizer2.AddGrowableCol(3)
         fgSizer2.SetFlexibleDirection(wx.BOTH)
         fgSizer2.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
         
         self.b_connect = wx.Button(self, wx.ID_ANY, u"Connect", wx.DefaultPosition, wx.DefaultSize, 0)
+        
+        self.b_connect.SetDefault()
         fgSizer2.Add(self.b_connect, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.b_test = wx.Button(self, wx.ID_ANY, u"Test Connection", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.b_disconnect = wx.Button(self, wx.ID_ANY, u"Disconnect", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.b_disconnect.Enable(False)
+        
+        fgSizer2.Add(self.b_disconnect, 0, wx.ALL, 5)
+        
+        self.b_test = wx.Button(self, wx.ID_ANY, u"Test", wx.DefaultPosition, wx.DefaultSize, 0)
         fgSizer2.Add(self.b_test, 0, wx.ALIGN_CENTER | wx.ALL | wx.EXPAND, 5)
         
         self.b_cancel = wx.Button(self, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0)
         fgSizer2.Add(self.b_cancel, 0, wx.ALL, 5)
         
-        bSizer1.Add(fgSizer2, 0, wx.ALL | wx.EXPAND, 5)
+        bSizer1.Add(fgSizer2, 0, wx.ALL, 5)
         
         bSizer2 = wx.BoxSizer(wx.VERTICAL)
         
@@ -99,7 +107,7 @@ class db_sign_in(wx.Dialog):
                                    wx.TE_MULTILINE | wx.TE_READONLY)
         bSizer2.Add(self.message, 1, wx.ALL | wx.EXPAND, 5)
         
-        bSizer1.Add(bSizer2, 0, wx.EXPAND, 10)
+        bSizer1.Add(bSizer2, 1, wx.EXPAND, 10)
         
         self.SetSizer(bSizer1)
         self.Layout()
@@ -114,6 +122,7 @@ class db_sign_in(wx.Dialog):
         self.host_name.Bind(wx.EVT_TEXT_ENTER, self.on_connect_button)
         self.use_db.Bind(wx.EVT_TEXT_ENTER, self.on_connect_button)
         self.b_connect.Bind(wx.EVT_BUTTON, self.on_connect_button)
+        self.b_disconnect.Bind(wx.EVT_BUTTON, self.on_disconnect_button)
         self.b_test.Bind(wx.EVT_BUTTON, self.on_test_button)
         self.b_cancel.Bind(wx.EVT_BUTTON, self.on_cancel_button)
     
@@ -125,6 +134,9 @@ class db_sign_in(wx.Dialog):
         event.Skip()
     
     def on_connect_button(self, event):
+        event.Skip()
+    
+    def on_disconnect_button(self, event):
         event.Skip()
     
     def on_test_button(self, event):

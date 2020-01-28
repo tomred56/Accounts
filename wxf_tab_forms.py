@@ -46,56 +46,94 @@ class MainFrame(wx.Frame):
         self.p_notebook = wx.Notebook(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         self.tab_connect = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL,
                                     u"connect")
-        tab_connect_top = wx.BoxSizer(wx.VERTICAL)
+        tab_taxonomy_top = wx.BoxSizer(wx.VERTICAL)
         
-        tab_connect_top.Add((0, 0), 1, wx.EXPAND, 5)
+        self.tree_taxonomy = wx.TreeCtrl(self.tab_connect, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                         wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT)
+        self.menu_taxonomy = wx.Menu()
+        self.m_add_peer = wx.MenuItem(self.menu_taxonomy, wx.ID_ANY, u"Add Peer" + u"\t" + u"alt-1", wx.EmptyString,
+                                      wx.ITEM_NORMAL)
+        self.menu_taxonomy.Append(self.m_add_peer)
         
-        gSizer4 = wx.GridSizer(0, 2, 0, 0)
+        self.m_add_child = wx.MenuItem(self.menu_taxonomy, wx.ID_ANY, u"Add Child" + u"\t" + u"alt-2", wx.EmptyString,
+                                       wx.ITEM_NORMAL)
+        self.menu_taxonomy.Append(self.m_add_child)
         
-        self.m_staticText84 = wx.StaticText(self.tab_connect, wx.ID_ANY, u"User Name", wx.DefaultPosition,
-                                            wx.DefaultSize, 0)
-        self.m_staticText84.Wrap(-1)
+        self.tree_taxonomy.Bind(wx.EVT_RIGHT_DOWN, self.tree_taxonomyOnContextMenu)
         
-        gSizer4.Add(self.m_staticText84, 0, wx.ALL, 5)
+        tab_taxonomy_top.Add(self.tree_taxonomy, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.user_name = wx.TextCtrl(self.tab_connect, wx.ID_ANY, u"dermot", wx.DefaultPosition, wx.DefaultSize, 0)
-        gSizer4.Add(self.user_name, 0, wx.ALL, 5)
+        self.taxo_panel = wx.Panel(self.tab_connect, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        p_taxonomy = wx.BoxSizer(wx.VERTICAL)
         
-        self.m_staticText85 = wx.StaticText(self.tab_connect, wx.ID_ANY, u"Password", wx.DefaultPosition,
-                                            wx.DefaultSize, 0)
-        self.m_staticText85.Wrap(-1)
+        self.taxo_heading = wx.StaticText(self.taxo_panel, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.taxo_heading.Wrap(-1)
         
-        gSizer4.Add(self.m_staticText85, 0, wx.ALL, 5)
+        self.taxo_heading.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
+        self.taxo_heading.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
         
-        self.password = wx.TextCtrl(self.tab_connect, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                    wx.TE_PASSWORD)
-        gSizer4.Add(self.password, 0, wx.ALL, 5)
+        p_taxonomy.Add(self.taxo_heading, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.m_staticText86 = wx.StaticText(self.tab_connect, wx.ID_ANY, u"Database", wx.DefaultPosition,
-                                            wx.DefaultSize, 0)
-        self.m_staticText86.Wrap(-1)
+        fgSizer211 = wx.FlexGridSizer(1, 2, 0, 0)
+        fgSizer211.AddGrowableCol(1)
+        fgSizer211.SetFlexibleDirection(wx.HORIZONTAL)
+        fgSizer211.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
         
-        gSizer4.Add(self.m_staticText86, 0, wx.ALL, 5)
+        self.m_staticText113 = wx.StaticText(self.taxo_panel, wx.ID_ANY, u"Description", wx.DefaultPosition,
+                                             wx.DefaultSize, 0)
+        self.m_staticText113.Wrap(-1)
         
-        self.use_db = wx.TextCtrl(self.tab_connect, wx.ID_ANY, u"test", wx.DefaultPosition, wx.DefaultSize, 0)
-        gSizer4.Add(self.use_db, 0, wx.ALL, 5)
+        fgSizer211.Add(self.m_staticText113, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.m_staticText83 = wx.StaticText(self.tab_connect, wx.ID_ANY, u"Host Name", wx.DefaultPosition,
-                                            wx.DefaultSize, 0)
-        self.m_staticText83.Wrap(-1)
+        self.taxo_name = wx.TextCtrl(self.taxo_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
+                                     wx.TE_PROCESS_ENTER)
+        self.taxo_name.SetMaxLength(80)
+        fgSizer211.Add(self.taxo_name, 1, wx.ALL | wx.EXPAND, 5)
         
-        gSizer4.Add(self.m_staticText83, 0, wx.ALL, 5)
+        p_taxonomy.Add(fgSizer211, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         
-        self.host_name = wx.TextCtrl(self.tab_connect, wx.ID_ANY, u"localhost", wx.DefaultPosition, wx.DefaultSize, 0)
-        gSizer4.Add(self.host_name, 0, wx.ALL, 5)
+        self.m_staticline53 = wx.StaticLine(self.taxo_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                            wx.LI_HORIZONTAL)
+        p_taxonomy.Add(self.m_staticline53, 0, wx.EXPAND, 5)
         
-        tab_connect_top.Add(gSizer4, 0, wx.ALIGN_CENTER, 5)
+        bSizer_panels11 = wx.BoxSizer(wx.HORIZONTAL)
         
-        tab_connect_top.Add((0, 0), 1, wx.EXPAND, 5)
+        bSizer_panels11.Add((0, 0), 1, wx.EXPAND, 5)
         
-        self.tab_connect.SetSizer(tab_connect_top)
+        self.m_staticline7 = wx.StaticLine(self.taxo_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                           wx.LI_VERTICAL)
+        bSizer_panels11.Add(self.m_staticline7, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        
+        self.m_staticText512 = wx.StaticText(self.taxo_panel, wx.ID_ANY, u"Dates Active", wx.DefaultPosition,
+                                             wx.DefaultSize, 0)
+        self.m_staticText512.Wrap(-1)
+        
+        bSizer_panels11.Add(self.m_staticText512, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        
+        self.taxo_start_date = wx.adv.DatePickerCtrl(self.taxo_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                     wx.DefaultSize,
+                                                     wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        bSizer_panels11.Add(self.taxo_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        
+        self.taxo_end_date = wx.adv.DatePickerCtrl(self.taxo_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                   wx.DefaultSize,
+                                                   wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        bSizer_panels11.Add(self.taxo_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        
+        p_taxonomy.Add(bSizer_panels11, 0, wx.ALL | wx.EXPAND, 5)
+        
+        self.m_staticline6 = wx.StaticLine(self.taxo_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                           wx.LI_HORIZONTAL)
+        p_taxonomy.Add(self.m_staticline6, 0, wx.EXPAND, 5)
+        
+        self.taxo_panel.SetSizer(p_taxonomy)
+        self.taxo_panel.Layout()
+        p_taxonomy.Fit(self.taxo_panel)
+        tab_taxonomy_top.Add(self.taxo_panel, 0, wx.EXPAND | wx.ALL, 5)
+        
+        self.tab_connect.SetSizer(tab_taxonomy_top)
         self.tab_connect.Layout()
-        tab_connect_top.Fit(self.tab_connect)
+        tab_taxonomy_top.Fit(self.tab_connect)
         self.p_notebook.AddPage(self.tab_connect, u"Connect", False)
         self.tab_accounts = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL,
                                      u"accounts")
@@ -481,94 +519,6 @@ class MainFrame(wx.Frame):
         self.p_notebook.AddPage(self.tab_suppliers, u"Suppliers", False)
         self.tab_taxonomy = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL,
                                      u"taxonomy")
-        tab_taxonomy_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.tree_taxonomy = wx.TreeCtrl(self.tab_taxonomy, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                         wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT)
-        self.menu_taxonomy = wx.Menu()
-        self.m_add_peer = wx.MenuItem(self.menu_taxonomy, wx.ID_ANY, u"Add Peer" + u"\t" + u"alt-1", wx.EmptyString,
-                                      wx.ITEM_NORMAL)
-        self.menu_taxonomy.Append(self.m_add_peer)
-        
-        self.m_add_child = wx.MenuItem(self.menu_taxonomy, wx.ID_ANY, u"Add Child" + u"\t" + u"alt-2", wx.EmptyString,
-                                       wx.ITEM_NORMAL)
-        self.menu_taxonomy.Append(self.m_add_child)
-        
-        self.tree_taxonomy.Bind(wx.EVT_RIGHT_DOWN, self.tree_taxonomyOnContextMenu)
-        
-        tab_taxonomy_top.Add(self.tree_taxonomy, 1, wx.ALL | wx.EXPAND, 5)
-        
-        self.taxo_panel = wx.Panel(self.tab_taxonomy, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
-        p_taxonomy = wx.BoxSizer(wx.VERTICAL)
-        
-        self.taxo_heading = wx.StaticText(self.taxo_panel, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.taxo_heading.Wrap(-1)
-        
-        self.taxo_heading.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
-        self.taxo_heading.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
-        
-        p_taxonomy.Add(self.taxo_heading, 0, wx.ALL | wx.EXPAND, 5)
-        
-        fgSizer211 = wx.FlexGridSizer(1, 2, 0, 0)
-        fgSizer211.AddGrowableCol(1)
-        fgSizer211.SetFlexibleDirection(wx.HORIZONTAL)
-        fgSizer211.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
-        
-        self.m_staticText113 = wx.StaticText(self.taxo_panel, wx.ID_ANY, u"Description", wx.DefaultPosition,
-                                             wx.DefaultSize, 0)
-        self.m_staticText113.Wrap(-1)
-        
-        fgSizer211.Add(self.m_staticText113, 0, wx.ALL | wx.EXPAND, 5)
-        
-        self.taxo_name = wx.TextCtrl(self.taxo_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
-                                     wx.TE_PROCESS_ENTER)
-        self.taxo_name.SetMaxLength(80)
-        fgSizer211.Add(self.taxo_name, 1, wx.ALL | wx.EXPAND, 5)
-        
-        p_taxonomy.Add(fgSizer211, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        
-        self.m_staticline53 = wx.StaticLine(self.taxo_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                            wx.LI_HORIZONTAL)
-        p_taxonomy.Add(self.m_staticline53, 0, wx.EXPAND, 5)
-        
-        bSizer_panels11 = wx.BoxSizer(wx.HORIZONTAL)
-        
-        bSizer_panels11.Add((0, 0), 1, wx.EXPAND, 5)
-        
-        self.m_staticline7 = wx.StaticLine(self.taxo_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                           wx.LI_VERTICAL)
-        bSizer_panels11.Add(self.m_staticline7, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        
-        self.m_staticText512 = wx.StaticText(self.taxo_panel, wx.ID_ANY, u"Dates Active", wx.DefaultPosition,
-                                             wx.DefaultSize, 0)
-        self.m_staticText512.Wrap(-1)
-        
-        bSizer_panels11.Add(self.m_staticText512, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
-        self.taxo_start_date = wx.adv.DatePickerCtrl(self.taxo_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
-                                                     wx.DefaultSize,
-                                                     wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        bSizer_panels11.Add(self.taxo_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        
-        self.taxo_end_date = wx.adv.DatePickerCtrl(self.taxo_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
-                                                   wx.DefaultSize,
-                                                   wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        bSizer_panels11.Add(self.taxo_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        
-        p_taxonomy.Add(bSizer_panels11, 0, wx.ALL | wx.EXPAND, 5)
-        
-        self.m_staticline6 = wx.StaticLine(self.taxo_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                           wx.LI_HORIZONTAL)
-        p_taxonomy.Add(self.m_staticline6, 0, wx.EXPAND, 5)
-        
-        self.taxo_panel.SetSizer(p_taxonomy)
-        self.taxo_panel.Layout()
-        p_taxonomy.Fit(self.taxo_panel)
-        tab_taxonomy_top.Add(self.taxo_panel, 0, wx.EXPAND | wx.ALL, 5)
-        
-        self.tab_taxonomy.SetSizer(tab_taxonomy_top)
-        self.tab_taxonomy.Layout()
-        tab_taxonomy_top.Fit(self.tab_taxonomy)
         self.p_notebook.AddPage(self.tab_taxonomy, u"Taxonomy", False)
         self.tab_summary = wx.Panel(self.p_notebook, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL,
                                     u"summary")
@@ -665,7 +615,7 @@ class MainFrame(wx.Frame):
         self.SetSizer(self.main_sizer)
         self.Layout()
         self.main_sizer.Fit(self)
-        self.status_bar = self.CreateStatusBar(3, wx.STB_DEFAULT_STYLE, wx.ID_ANY)
+        self.status_bar = self.CreateStatusBar(3, wx.STB_DEFAULT_STYLE | wx.BORDER_RAISED, wx.ID_ANY)
         
         self.Centre(wx.BOTH)
         
@@ -674,12 +624,6 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_quit_button, id=self.exit.GetId())
         self.p_notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_new_page)
         self.p_notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.on_changing_page)
-        self.p_parent.Bind(wx.EVT_COMBOBOX, self._on_lookup)
-        self.p_holder.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
-        self.p_start_date1.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
-        self.p_end_date1.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
-        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
-        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
         self.tree_taxonomy.Bind(wx.EVT_LEFT_DCLICK, self.on_edit_taxonomy)
         self.tree_taxonomy.Bind(wx.EVT_RIGHT_DOWN, self.on_taxo_rdown)
         self.tree_taxonomy.Bind(wx.EVT_TREE_ITEM_MENU, self.on_taxo_menu_called)
@@ -692,6 +636,12 @@ class MainFrame(wx.Frame):
         self.taxo_name.Bind(wx.EVT_TEXT_ENTER, self.on_taxo_enter)
         self.taxo_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_taxo_edited)
         self.taxo_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_taxo_edited)
+        self.p_parent.Bind(wx.EVT_COMBOBOX, self._on_lookup)
+        self.p_holder.Bind(wx.EVT_COMBOBOX, self.on_grandparent)
+        self.p_start_date1.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date1.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
+        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
+        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
         self.b_new.Bind(wx.EVT_BUTTON, self.on_new_button)
         self.b_edit.Bind(wx.EVT_BUTTON, self.on_edit_button)
         self.b_reset.Bind(wx.EVT_BUTTON, self.on_reset_button)
@@ -700,6 +650,7 @@ class MainFrame(wx.Frame):
         self.b_apply.Bind(wx.EVT_BUTTON, self.on_apply_button)
         self.b_cancel.Bind(wx.EVT_BUTTON, self.on_cancel_button)
         self.b_exit.Bind(wx.EVT_BUTTON, self.on_exit_button)
+        self.status_bar.Bind(wx.EVT_LEFT_DCLICK, self.on_status_dclick)
     
     def __del__(self):
         pass
@@ -715,18 +666,6 @@ class MainFrame(wx.Frame):
         event.Skip()
     
     def on_changing_page(self, event):
-        event.Skip()
-    
-    def _on_lookup(self, event):
-        event.Skip()
-    
-    def on_grandparent(self, event):
-        event.Skip()
-    
-    def on_start_date(self, event):
-        event.Skip()
-    
-    def on_end_date(self, event):
         event.Skip()
     
     def on_edit_taxonomy(self, event):
@@ -756,6 +695,18 @@ class MainFrame(wx.Frame):
     def on_taxo_enter(self, event):
         event.Skip()
     
+    def _on_lookup(self, event):
+        event.Skip()
+    
+    def on_grandparent(self, event):
+        event.Skip()
+    
+    def on_start_date(self, event):
+        event.Skip()
+    
+    def on_end_date(self, event):
+        event.Skip()
+    
     def on_new_button(self, event):
         event.Skip()
     
@@ -778,6 +729,9 @@ class MainFrame(wx.Frame):
         event.Skip()
     
     def on_exit_button(self, event):
+        event.Skip()
+    
+    def on_status_dclick(self, event):
         event.Skip()
     
     def tree_taxonomyOnContextMenu(self, event):
@@ -2344,3 +2298,151 @@ class RulesEdit(wx.Panel):
     
     def on_end_date(self, event):
         event.Skip()
+
+
+###########################################################################
+## Class TreeManager
+###########################################################################
+
+class TreeManager(wx.Panel):
+    
+    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(500, 300), style=wx.TAB_TRAVERSAL,
+                 name=wx.EmptyString):
+        wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
+        
+        tree_top = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tree_trunk = wx.TreeCtrl(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                      wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT)
+        self.tree_menu = wx.Menu()
+        self.m_add_peer = wx.MenuItem(self.tree_menu, wx.ID_ANY, u"Add Peer" + u"\t" + u"alt-1", wx.EmptyString,
+                                      wx.ITEM_NORMAL)
+        self.tree_menu.Append(self.m_add_peer)
+        
+        self.m_add_child = wx.MenuItem(self.tree_menu, wx.ID_ANY, u"Add Child" + u"\t" + u"alt-2", wx.EmptyString,
+                                       wx.ITEM_NORMAL)
+        self.tree_menu.Append(self.m_add_child)
+        
+        self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.tree_trunkOnContextMenu)
+        
+        tree_top.Add(self.tree_trunk, 1, wx.ALL | wx.EXPAND, 5)
+        
+        self.tree_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        panel_top = wx.BoxSizer(wx.VERTICAL)
+        
+        self.panel_heading = wx.StaticText(self.tree_panel, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize,
+                                           0)
+        self.panel_heading.Wrap(-1)
+        
+        self.panel_heading.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
+        self.panel_heading.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
+        
+        panel_top.Add(self.panel_heading, 0, wx.ALL | wx.EXPAND, 5)
+        
+        fgSizer211 = wx.FlexGridSizer(1, 2, 0, 0)
+        fgSizer211.AddGrowableCol(1)
+        fgSizer211.SetFlexibleDirection(wx.HORIZONTAL)
+        fgSizer211.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
+        
+        self.m_staticText113 = wx.StaticText(self.tree_panel, wx.ID_ANY, u"Description", wx.DefaultPosition,
+                                             wx.DefaultSize, 0)
+        self.m_staticText113.Wrap(-1)
+        
+        fgSizer211.Add(self.m_staticText113, 0, wx.ALL | wx.EXPAND, 5)
+        
+        self.taxo_name = wx.TextCtrl(self.tree_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
+                                     wx.TE_PROCESS_ENTER)
+        self.taxo_name.SetMaxLength(80)
+        fgSizer211.Add(self.taxo_name, 1, wx.ALL | wx.EXPAND, 5)
+        
+        panel_top.Add(fgSizer211, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        
+        self.m_staticline53 = wx.StaticLine(self.tree_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                            wx.LI_HORIZONTAL)
+        panel_top.Add(self.m_staticline53, 0, wx.EXPAND, 5)
+        
+        bSizer_panels11 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        bSizer_panels11.Add((0, 0), 1, wx.EXPAND, 5)
+        
+        self.m_staticline7 = wx.StaticLine(self.tree_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                           wx.LI_VERTICAL)
+        bSizer_panels11.Add(self.m_staticline7, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        
+        self.m_staticText512 = wx.StaticText(self.tree_panel, wx.ID_ANY, u"Dates Active", wx.DefaultPosition,
+                                             wx.DefaultSize, 0)
+        self.m_staticText512.Wrap(-1)
+        
+        bSizer_panels11.Add(self.m_staticText512, 0, wx.ALIGN_CENTER | wx.ALL, 5)
+        
+        self.taxo_start_date = wx.adv.DatePickerCtrl(self.tree_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                     wx.DefaultSize,
+                                                     wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        bSizer_panels11.Add(self.taxo_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        
+        self.taxo_end_date = wx.adv.DatePickerCtrl(self.tree_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
+                                                   wx.DefaultSize,
+                                                   wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        bSizer_panels11.Add(self.taxo_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        
+        panel_top.Add(bSizer_panels11, 0, wx.ALL | wx.EXPAND, 5)
+        
+        self.m_staticline6 = wx.StaticLine(self.tree_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+                                           wx.LI_HORIZONTAL)
+        panel_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
+        
+        self.tree_panel.SetSizer(panel_top)
+        self.tree_panel.Layout()
+        panel_top.Fit(self.tree_panel)
+        tree_top.Add(self.tree_panel, 0, wx.EXPAND | wx.ALL, 5)
+        
+        self.SetSizer(tree_top)
+        self.Layout()
+        
+        # Connect Events
+        self.tree_trunk.Bind(wx.EVT_LEFT_DCLICK, self.on_edit)
+        self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.on_taxo_rdown)
+        self.tree_trunk.Bind(wx.EVT_TREE_ITEM_MENU, self.on_menu_called)
+        self.tree_trunk.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.on_menu)
+        self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_changed_branch)
+        self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_change_branch)
+        self.Bind(wx.EVT_MENU, self.on_menu_item, id=self.m_add_peer.GetId())
+        self.Bind(wx.EVT_MENU, self.on_menu_item, id=self.m_add_child.GetId())
+        self.taxo_name.Bind(wx.EVT_TEXT, self.on_taxo_edited)
+        self.taxo_name.Bind(wx.EVT_TEXT_ENTER, self.on_taxo_enter)
+        self.taxo_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_taxo_edited)
+        self.taxo_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_taxo_edited)
+    
+    def __del__(self):
+        pass
+    
+    # Virtual event handlers, overide them in your derived class
+    def on_edit(self, event):
+        event.Skip()
+    
+    def on_taxo_rdown(self, event):
+        event.Skip()
+    
+    def on_menu_called(self, event):
+        event.Skip()
+    
+    def on_menu(self, event):
+        event.Skip()
+    
+    def on_changed_branch(self, event):
+        event.Skip()
+    
+    def on_change_branch(self, event):
+        event.Skip()
+    
+    def on_menu_item(self, event):
+        event.Skip()
+    
+    def on_taxo_edited(self, event):
+        event.Skip()
+    
+    def on_taxo_enter(self, event):
+        event.Skip()
+    
+    def tree_trunkOnContextMenu(self, event):
+        self.tree_trunk.PopupMenu(self.tree_menu, event.GetPosition())
