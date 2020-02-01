@@ -209,7 +209,7 @@ class DataTables:
     def __initial(self):
         self._exists = True
         self._columns = _ALL_COLUMNS[self.table_name]
-        self.columns = [(k, v['py_type'], v['Comment']) for k, v in self._columns.items()]
+        self.columns = [(k, v['py_type'], v['py_default'], v['Comment']) for k, v in self._columns.items()]
         self.colcount = len(self.columns)
         self.__key_list()
         self.__fetch()

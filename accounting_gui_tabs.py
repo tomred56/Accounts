@@ -1,3 +1,4 @@
+import pymysql.err
 import wx
 import wx.adv
 import wx.grid
@@ -94,7 +95,7 @@ class BaseWindow(wxf.MainFrame):
         self.conn_status = CX_DISCONNECTED
         self.connect()
         self.__notebook_init()
-        self.__main_refresh()
+        self.main_refresh()
 
     def connect(self):
         with SignInDialog(None, self) as dlg:
@@ -106,42 +107,49 @@ class BaseWindow(wxf.MainFrame):
                 pass
             else:
                 self.on_exit_button(None)
-    
+
     def __notebook_init(self):
-        self.all_tabs['summary'] = Summary(self.p_notebook, self)
-        self.all_tabs['suppliers'] = Suppliers(self.p_notebook, self)
-        self.all_tabs['accounts'] = Accounts(self.p_notebook, self)
+        self.all_tabs['summary'] = Summary(self.p_notebook, 'summary',
+                                           self, ('accounts', 'transactions'),
+                                           self.all_status['summary'])
+        self.all_tabs['suppliers'] = Suppliers(self.p_notebook, 'suppliers',
+                                               self, ('suppliers', 'contacts'),
+                                               self.all_status['suppliers'])
+        self.all_tabs['accounts'] = Accounts(self.p_notebook, 'accounts',
+                                             self, ('suppliers', 'accounts', 'transactions'),
+                                             self.all_status['accounts'])
         self.all_tabs['taxonomy'] = TreeManagement(self.p_notebook, 'taxonomy',
-                                                   self, 'categories',
+                                                   self, ('categories', 'subcategories', 'details'),
                                                    self.all_status['taxonomy'])
         self.p_notebook.AddPage(self.all_tabs['suppliers'], 'Suppliers')
         self.p_notebook.AddPage(self.all_tabs['accounts'], 'Accounts')
         self.p_notebook.AddPage(self.all_tabs['taxonomy'], 'Taxonomy')
-        self.Layout()
-        
+        self.p_notebook.AddPage(self.all_tabs['summary'], 'Summary')
+    
         this_tab = self.p_notebook.FindPage(self.all_tabs['taxonomy'])
         self.p_notebook.SetSelection(this_tab)
-    
+        self.Layout()
+
     def on_changing_page(self, event):
         this_page = self.p_notebook.GetSelection()
         this_tab = self.p_notebook.GetPage(this_page)
-        this_label = this_tab.Name
+        this_label = this_tab.Name.lower()
         if self.conn_status == CX_DISCONNECTED:
             event.Veto()
             set_message(self, (1,), ('Not connected to database',))
-            self.__main_refresh()
+            self.main_refresh()
         elif self.all_status[this_label] & TX_CHANGED:
             event.Veto()
             set_message(self, (1,), (f'Unsaved changes on this tab',))
-            self.__main_refresh()
+            self.main_refresh()
     
     def on_new_page(self, event):
         this_page = self.p_notebook.GetSelection()
         self.this_notebook_page = self.p_notebook.GetPage(this_page)
-        self.this_page_name = self.this_notebook_page.Name
-        
+        self.this_page_name = self.this_notebook_page.Name.lower()
+
         print(self.this_page_name)
-        self.__main_refresh()
+        self.main_refresh()
     
     # def __connect_load(self):
     #     # db.get_structure(self.database)
@@ -169,33 +177,7 @@ class BaseWindow(wxf.MainFrame):
         self.parent_table = self.data.get(ANCESTORS[activate_this][0], None)
         self.grandparent_table = self.data.get(ANCESTORS[activate_this][1], None)
         #        self.__rows_refresh()
-        #        self.__main_refresh()
-    
-    def __summary_init(self):
-        
-        account_data = self.data.get('accounts', None)
-        transaction_data = self.data.get('transactions', None)
-        if account_data.rowcount != account_data.sel_rowcount:
-            account_data.process('fetch')
-        if transaction_data.rowcount != transaction_data.sel_rowcount:
-            transaction_data.process('fetch')
-        values = {}
-        values['Income'] = sum(v['amount'] for v in transaction_data.records.values() if v['amount'] > 0)
-        values['Expenditure'] = sum(v['amount'] for v in transaction_data.records.values() if v['amount'] < 0)
-        values['Balance'] = sum(v['amount'] for v in transaction_data.records.values())
-        a_types = set(v['type'] for v in account_data.records.values())
-        for a_type in a_types:
-            values[a_type] = sum(v['amount'] for v in transaction_data.records.values()
-                                 if account_data.records[v['parent']]['account_type'] == a_type)
-        self.summary_cell_values = []
-        for k, v in values.items():
-            self.summary_cell_values.append((wx.StaticText(self.tab_summary, -1, f'{k}:'), wx.EXPAND))
-            self.summary_cell_values.append((wx.TextCtrl(self.tab_summary, value=f'{v}',
-                                                         style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
-        
-        self.tab_summary.summary_sizer.Clear()
-        self.tab_summary.summary_sizer.AddMany(self.summary_cell_values)
-        self.tab_summary.summary_sizer.Layout()
+        #        self.main_refresh()
     
     def __rows_init(self):
         self.rows_sizer = wx.grid.Grid(self)
@@ -306,9 +288,9 @@ class BaseWindow(wxf.MainFrame):
         self.single.Layout()
         self.main_single.Layout()
         self.main_sizer.Show(self.single, True, True)
-        self.__main_refresh()
+        self.main_refresh()
 
-    def __main_refresh(self):
+    def main_refresh(self):
         #        self.p_header.SetLabel(f'Table: {self.this_table_name.capitalize()}')
         self.main_sizer.Layout()
         self.Layout()
@@ -340,23 +322,13 @@ class BaseWindow(wxf.MainFrame):
     #            self.calendar.Hide()
     #        else:
     #            self.calendar.Show()
-    
+
     def on_exit_button(self, event):
-        if self.this_page_name == 'taxonomy' and self.taxo_status & TX_CHANGED and not self.taxo_status & TX_RESET:
-            set_message(self, (1,), ('Unsaved changes',),
-                        message='Press again to confirm you want to leave without saving changes.')
-            self.taxo_status |= TX_RESET
-            self.__main_refresh()
-        else:
-            self.taxo_status = TX_CLEAN
-            self.is_tab_dirty = False
-            self.tree_taxonomy.Unbind(wx.EVT_TREE_SEL_CHANGED)
-            self.tree_taxonomy.Unbind(wx.EVT_TREE_SEL_CHANGING)
-            try:
-                self.database.close()
-            except:
-                pass
-            self.Close()
+        try:
+            self.database.close()
+        except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
+            pass
+        self.Close()
 
     def on_status_dclick(self, event):
         place = self.status_bar.GetFieldRect(2)
@@ -468,12 +440,12 @@ class SignInDialog(wxf_dialog.db_sign_in):
 
 
 class TreeManagement(wxf.TreeManager):
-    def __init__(self, parent, tab_name, base, base_table, status):
-        super().__init__(parent)
+    def __init__(self, parent, tab_name, base, tables, status):
+        super().__init__(parent, name=tab_name)
         self.parent = parent
         self.tab_name = tab_name
         self.base = base
-        self.base_table = base_table
+        self.tables = tables
         self.this_table = None
         self.parent_table = None
         self.grandparent_table = None
@@ -485,7 +457,7 @@ class TreeManagement(wxf.TreeManager):
         tree = self.tree_trunk
         if not self._root:
             self._root = tree.AddRoot(self.tab_name)
-            self.__load_branches(branch=self._root, level=self.base_table)
+            self.__load_branches(branch=self._root, levels=self.tables)
             first_item = tree.GetFirstChild(self._root)
             if first_item[0].IsOk():
                 tree.SelectItem(first_item[0])
@@ -493,22 +465,29 @@ class TreeManagement(wxf.TreeManager):
                 self.status = TX_CLEAN
                 self.tree_panel.Hide()
             else:
-                self.on_menu_item(None)
+                self.__get_changes('add', self.tables[0])
         self.__tree_accel()
+        self._button_refresh()
         self.Layout()
         return tree.GetSelection()
     
     def __redraw(self):
         tree = self.tree_trunk
-        self.__refresh_data(self.branch_level)
+        branch = tree.Selection()
+        info = tree.GetItemData(branch)
+        levels = info.get('levels', ())
+        data = info.get('data')
+        self.__refresh_data(levels[0])
         if self.status & TX_ADD_CHILD:
-            self.__refresh_data(self.child_branch_level, self.branch_data['key'])
+            self.__refresh_data(levels[1], data['key'])
         if self.status & TX_EDIT:
-            key = self.branch_data['key']
+            key = data['key']
             new_data = self.this_table.rows[key]
             tree.SetItemText(self.branch, new_data['name'])
             for k, v in new_data.items():
-                self.branch_data[k] = v
+                data[k] = v
+            tree.SelectItem(branch)
+            tree.SetFocusedItem(branch)
             self.status = TX_CLEAN
             self._button_refresh()
             self.name.SetLabelText('')
@@ -518,28 +497,28 @@ class TreeManagement(wxf.TreeManager):
             new_data = self.this_table.rows[key]
             self.branch = tree.InsertItem(self.parent_branch, self.branch,
                                           new_data['name'],
-                                          data={'level': self.branch_level, 'data': new_data})
+                                          data={'levels': levels, 'data': new_data})
             self.status = TX_ADD_PEER
-            self._button_refresh(show=('reset', 'apply', 'cancel'), enable=('reset', 'cancel'))
+            self._button_refresh(enable=('cancel',))
             tree.SelectItem(self.branch)
-            self.name.SetLabelText('')
-            self.name.SetFocus()
+            tree.SetFocusedItem(self.branch)
+            self.__get_changes('add', levels[0])
         elif self.status & TX_ADD_CHILD:
             key = self.this_table.get_next() - 1
             self.child_branch_data = self.this_table.rows[key]
             self.child_branch = tree.InsertItem(self.branch, 0,
                                                 self.child_branch_data['name'],
                                                 data={
-                                                        'level': self.child_branch_level,
+                                                        'levels': levels[1:],
                                                         'data': self.child_branch_data
                                                 })
             self.status = TX_ADD_PEER
-            self._button_refresh(show=('reset', 'apply', 'cancel'), enable=('reset', 'cancel'))
+            self._button_refresh(enable=('cancel',))
             tree.SelectItem(self.child_branch)
-            self.name.SetLabelText('')
-            self.name.SetFocus()
+            tree.SetFocusedItem(self.branch)
+            self.__get_changes('add', levels[1])
         self.__tree_accel()
-        # self.tab_taxonomy.Layout()
+        self.Layout()
     
     def __get_changes(self, action, table):
         assert action in ('add', 'edit'), f'Unrecognised taxonomy action {action} {table} '
@@ -567,7 +546,7 @@ class TreeManagement(wxf.TreeManager):
                 self.child_branch_level = table
             self.start_date.SetValue(min_date)
             self.end_date.SetValue(max_date)
-        elif action == 'edit':
+        else:
             self.name.SetValue(branch_data['name'])
             self.start_date.SetValue(max(min_date, min(max_date, branch_data['start_date'])))
             self.end_date.SetValue(min(max_date, max(min_date, branch_data['end_date'])))
@@ -575,28 +554,29 @@ class TreeManagement(wxf.TreeManager):
 
         self.start_date.SetRange(min_date, max_date)
         self.end_date.SetRange(min_date, max_date)
-        self._button_refresh(show=('reset', 'apply', 'cancel'), enable=('reset', 'cancel'))
+        self._button_refresh(enable=('cancel',))
         self.tree_panel.Show()
         self.name.SetFocus()
-        # self.tab_taxonomy.Layout()
-        # self.__main_refresh()
+        self.Layout()
+        # self.main_refresh()
     
     def __apply(self):
         is_valid = True
-        
+    
+        tree = self.tree_trunk
+        panel = self.tree_panel
         this_panel = {v[0]: f'{v[0]}' for v in self.this_table.columns
-                      if hasattr(self, f'{v[0]}')}
+                      if hasattr(panel, f'p_{v[0]}')}
         if self.status & TX_EDIT:
             row = self.branch_data
         else:
             row = {}
         new_data = {}
-        tree = self.tree_trunk
         for v in self.this_table.columns:
             p_field = None
             new_value = None
             if v[0] in this_panel.keys():
-                p_field = getattr(self, this_panel[v[0]])
+                p_field = getattr(panel, this_panel[v[0]], '')
                 if v[0] == 'name':
                     new_value = p_field.GetValue().title()
                     if new_value == '':
@@ -632,6 +612,8 @@ class TreeManagement(wxf.TreeManager):
                     new_value = grandparent_branch_data['key']
                 else:
                     continue
+            else:
+                new_value = v[2]
             
             if self.status & (TX_ADD_CHILD | TX_ADD_PEER) or new_value != row.get(v[0], None):
                 if isinstance(p_field, wx._adv.DatePickerCtrl):
@@ -650,7 +632,7 @@ class TreeManagement(wxf.TreeManager):
                 self.status = TX_CLEAN
         if not is_valid:
             set_message(self, (1,), ('Error detected',), message=self.this_table.get_message())
-        # self.__main_refresh()
+        # self.main_refresh()
         return is_valid
     
     def __swap(self, branch1, branch2):
@@ -659,13 +641,13 @@ class TreeManagement(wxf.TreeManager):
         b2_info = self.tree_trunk.GetItemData(branch2)
         b2_data = b2_info['data']
         parent = b1_data.get('parent', 0)
-        level = b1_info['level']
+        levels = b1_info['levels']
         new_data1 = {'key': b1_data['key'], 'sort': b2_data['sort']}
         new_data2 = {'key': b2_data['key'], 'sort': b1_data['sort']}
-        self.__activate_table(self.branch_level)
+        self.__activate_table(levels[0])
         if self.this_table.process('swap', parent, new_data1, new_data2):
             parent_branch = self.tree_trunk.GetItemParent(branch1)
-            self.__load_branches(branch=parent_branch, level=level)
+            self.__load_branches(branch=parent_branch, levels=levels)
         else:
             set_message(self, (1,), (f'error swapping branches',))
     
@@ -675,36 +657,28 @@ class TreeManagement(wxf.TreeManager):
         self.parent_table = self.base.data.get(ANCESTORS[activate_this][0], None)
         self.grandparent_table = self.base.data.get(ANCESTORS[activate_this][1], None)
     
-    def __load_branches(self, branch=None, level=None):
+    def __load_branches(self, branch=None, levels=()):
         assert branch.IsOk(), f'invalid parent branch passed to reload'
-        assert level in self.base.data.keys(), f'invalid table name {level} passed to reload'
+        assert len(levels) and levels[0] in self.base.data.keys(), f'invalid table names {levels} passed to reload'
         tree = self.tree_trunk
         tree.DeleteChildren(branch)
-        levels = DESCENDANTS.get(level, ())
-        if len(levels):
-            if len(levels) == 1:
-                next_level = levels[0]
-            else:
-                with SelectBranch(self, list(levels), 'Select Branch:') as dlg:
-                    next_level = dlg.ShowModal()
-        else:
-            next_level = ''
+        next_levels = levels[1:]
         if branch == self._root:
             key = 0
         else:
-            itemdata = tree.GetItemData(branch)
-            key = itemdata['data']['key']
+            item_data = tree.GetItemData(branch)
+            key = item_data['data']['key']
         
-        self.__refresh_data(level, key)
-        db_data = self.base.data.get(level, None)
+        self.__refresh_data(levels[0], key)
+        db_data = self.base.data.get(levels[0], None)
         for key, record in db_data.rows.items():
             container = self.tree_trunk.AppendItem(branch, record['name'],
-                                                   data={'level': level, 'data': record})
-            if next_level:
-                self.__load_branches(container, next_level)
+                                                   data={'levels': levels, 'data': record})
+            if next_levels:
+                self.__load_branches(container, next_levels)
     
-    def __refresh_data(self, level, parent=0):
-        db_data = self.base.data.get(level, None)
+    def __refresh_data(self, table, parent=0):
+        db_data = self.base.data.get(table, None)
         if not parent:
             if db_data.rowcount != db_data.sel_rowcount:
                 db_data.process('fetch')
@@ -744,43 +718,48 @@ class TreeManagement(wxf.TreeManager):
         print(f'Alt-down key press')
         event.Skip()
     
-    def on_edit(self, event):
-        print('on_edit_taxonomy')
+    def on_left_double(self, event):
+        print('on_edit')
+        tree = self.tree_trunk
+        pt = event.GetPosition()
+        item, flags = tree.HitTest(pt)
+        if item.IsOk() and not tree.IsSelected(item):
+            tree.SelectItem(item)
+            tree.SetFocusedItem(item)
         branch = self.tree_trunk.GetSelection()
         branch_info = self.tree_trunk.GetItemData(branch)
-        branch_level = branch_info.get('level', '')
-        # action = ['Edit', branch_level]
-        self.__get_changes('edit', branch_level.lower())
+        levels = branch_info['levels']
+        self.__get_changes('edit', levels[0].lower())
     
     def on_edited(self, event):
         print('on_edited')
         if self.status:
             self.status |= TX_CHANGED
             self.status ^= TX_RESET
-            self._button_refresh(show=('reset', 'apply', 'cancel'), enable=('reset', 'apply', 'cancel'))
+            self._button_refresh(enable=('reset', 'apply', 'cancel'))
     
     def on_enter(self, event):
-        print('on_taxo_enter')
-        self.base.on_apply_button(event)
+        print('on_enter')
+        self.__apply()
     
-    def on_change_branch(self, event):
+    def on_changing_branch(self, event):
         print('on_changing_branch')
         if self.status & TX_CHANGED:
             event.Veto()
             set_message(self, (1,), ('Unsaved Changes',))
-            self.base.__main_refresh()
+            self.base.main_refresh()
     
     def on_changed_branch(self, event):
         print('on_changed_branch')
         tree = event.GetEventObject()
         self.branch = tree.GetSelection()
         branch_info = tree.GetItemData(self.branch)
-        self.branch_level = branch_info['level']
+        self.branch_level = branch_info['levels'][0]
         self.branch_data = branch_info['data']
         self.parent_branch = tree.GetItemParent(self.branch)
         if self.parent_branch != self._root:
             parent_branch_info = tree.GetItemData(self.parent_branch)
-            self.parent_branch_level = parent_branch_info['level']
+            self.parent_branch_level = parent_branch_info['levels'][0]
             self.parent_branch_data = parent_branch_info['data']
         else:
             self.parent_branch_level = None
@@ -789,12 +768,15 @@ class TreeManagement(wxf.TreeManager):
         self.child_branch_level = None
         self.child_branch_data = None
         self.status = TX_CLEAN
+        if self.tree_panel.Shown:
+            self.tree_panel.Hide()
+            self.Layout()
     
-    def on_rdown(self, event):
+    def on_right_down(self, event):
         print('on_rdown')
         if self.status & TX_CHANGED:
             set_message(self, (1,), ('Unsaved Changes',))
-            self.base.__main_refresh()
+            self.base.main_refresh()
         else:
             tree = self.tree_trunk
             pt = event.GetPosition()
@@ -804,46 +786,37 @@ class TreeManagement(wxf.TreeManager):
                 tree.SetFocusedItem(item)
             branch = tree.GetSelection()
             branch_info = tree.GetItemData(branch)
-            children = tree.GetChildrenCount(branch)
-            level = branch_info['level']
-            self.m_add_child.SetItemLabel(' ')
-            self.m_add_child.Enable(False)
-            if level == 'categories':
-                self.m_add_peer.SetItemLabel('Add Category')
-                if not children:
-                    self.m_add_child.SetItemLabel('Add SubCategory')
-                    self.m_add_child.Enable()
-            elif level == 'subcategories':
-                self.m_add_peer.SetItemLabel('Add SubCategory')
-                if not children:
-                    self.m_add_child.SetItemLabel('Add Detail')
-                    self.m_add_child.Enable()
-            elif level == 'details':
-                self.m_add_peer.SetItemLabel('Add Detail')
+            # children = tree.GetChildrenCount(branch)
+            levels = branch_info['levels']
+            self.m_add_peer.SetItemLabel(f'Add {levels[0].capitalize()}')
+            if len(levels) > 1:
+                self.m_add_child.SetItemLabel(f'Add {levels[1].capitalize()}')
+                self.m_add_child.Enable()
             else:
-                pass
+                self.m_add_child.SetItemLabel(' ')
+                self.m_add_child.Enable(False)
             event.Skip()
     
-    def on_menu(self, event):
-        print('on_menu')
-        event.Skip()
-    
-    def on_menu_called(self, event):
-        print('on_menu_called')
-        event.Skip()
-    
+    # def on_menu(self, event):
+    #     print('on_menu')
+    #     event.Skip()
+    #
+    # def on_menu_called(self, event):
+    #     print('on_menu_called')
+    #     event.Skip()
+    #
     def on_menu_item(self, event):
         print('on_menu_item')
         if event:
             id_selected = event.GetId()
             menu = event.GetEventObject()
             action = menu.GetLabelText(id_selected).lower().split()
-            action[1] = LOOKUPS.get(action[1], '')
+            action[1] = LOOKUPS.get(action[1], action[1])
         else:
-            action = ['add', 'category']
+            action = ['add', self.tables[0]]
         self.__get_changes(action[0], action[1])
     
-    def _button_refresh(self, show=(), enable=(), focus=()):
+    def _button_refresh(self, show=('all',), enable=(), focus=()):
         
         self.b_exit.Show()
         self.b_exit.Enable()
@@ -855,47 +828,68 @@ class TreeManagement(wxf.TreeManager):
                 'cancel': self.b_cancel
         }
         for k, v in buttons.items():
-            if k in show:
+            if k in show or 'all' in show:
                 v.Show()
                 if k in enable:
                     v.Enable()
                     if k in focus:
                         v.SetFocus()
+                else:
+                    v.Disable()
             else:
-                v.Disable()
                 v.Hide()
+                v.Disable()
     
     def on_new_button(self, event):
-        self.is_new = True
-        self.base.main_menu.EnableTop(1, False)
-        if event:
-            self.__single_load()
-        else:
-            self.__single_reset_panel()
+        branch = self.tree_trunk.GetSelection()
+        branch_info = self.tree_trunk.GetItemData(branch)
+        levels = branch_info.get('levels', ())
+        result = 0
+        if len(levels) > 1:
+            with SelectBranch(self, levels[0:1], 'Select') as dlg:
+                result = dlg.ShowModal()
+        
+        self.__get_changes('add', levels[result])
     
     def on_edit_button(self, event):
-        self.base.main_menu.EnableTop(1, False)
-        self.is_edit = True
-        if event:
-            self.__single_load()
-        else:
-            self.__single_reset_panel()
+        branch = self.tree_trunk.GetSelection()
+        branch_info = self.tree_trunk.GetItemData(branch)
+        branch_level = branch_info.get('level', '')
+        levels = branch_info['levels']
+        self.__get_changes('edit', levels[0].lower())
     
     def on_reset_button(self, event):
         if self.status & (TX_CHANGED):
             action = self.panel_heading.GetLabel().lower().split()
             self.__get_changes(action[0], action[1])
         set_message(self, (1,), ('',), message='')
-        self.base.__main_refresh()
+        self.base.main_refresh()
     
     def on_apply_button(self, event):
         self.__apply()
     
     def on_cancel_button(self, event):
+        current = self.tree_trunk.Selection()
         self.__tree_init()
+        self.tree_trunk.SelectItem(current)
+        self.tree_trunk.SetFocusedItem(current)
         set_message(self, (1,), message='')
-        self.base.__main_refresh()
-
+        self.tree_panel.Hide()
+        self.Layout()
+        self.base.main_refresh()
+    
+    def on_exit_button(self, event):
+        if self.status & TX_CHANGED and not self.status & TX_RESET:
+            set_message(self, (1,), ('Unsaved changes',),
+                        message='Press again to confirm you want to leave without saving changes.')
+            self.status |= TX_RESET
+            self.base.main_refresh()
+        else:
+            self.status = TX_CLEAN
+            self.is_tab_dirty = False
+            self.Unbind(wx.EVT_TREE_SEL_CHANGED)
+            self.Unbind(wx.EVT_TREE_SEL_CHANGING)
+        event.Skip()
 
 class GenericPanelActions:
     def __init__(self, **kwargs):
@@ -903,7 +897,8 @@ class GenericPanelActions:
         self.child = kwargs.get('child')
         self.child.Hide()
         self.child.Freeze()
-        self.table_name = self.child.Label
+        self.tables = kwargs.get('tables', ())
+        self.table_name = self.tables[0]
         self.this_table = self.base.data[self.table_name]
         self.parent_table = self.base.data.get(ANCESTORS[self.table_name][0], None)
         self.grandparent_table = self.base.data.get(ANCESTORS[self.table_name][1], None)
@@ -919,6 +914,7 @@ class GenericPanelActions:
         self.lookup_lists = {k: (0, {'': 0}) for k in LOOKUPS.keys()}
         self.these_taxonomies = {}
         self.this_taxonomy = [0, 0, 0]
+        self.status = kwargs.get('status')
         self.child.Hide()
         self.child.Thaw()
 
@@ -1216,9 +1212,9 @@ class Details(wxf.DetailEdit, GenericPanelActions):
 
 
 class Suppliers(wxf.SupplierEdit, GenericPanelActions):
-    def __init__(self, parent, base, **kwargs):
-        super().__init__(parent)
-        GenericPanelActions.__init__(self, base=base, child=self)
+    def __init__(self, parent, tab_name, base, tables, status):
+        super().__init__(parent, name=tab_name)
+        GenericPanelActions.__init__(self, base=base, child=self, tables=tables, status=status)
     
     """
     def new(self, **kwargs):
@@ -1234,9 +1230,9 @@ class Suppliers(wxf.SupplierEdit, GenericPanelActions):
 
 
 class Accounts(wxf.AccountEdit, GenericPanelActions):
-    def __init__(self, parent, base, **kwargs):
+    def __init__(self, parent, tab_name, base, tables, status):
         super().__init__(parent)
-        GenericPanelActions.__init__(self, base=base, child=self)
+        GenericPanelActions.__init__(self, base=base, child=self, tables=tables, status=status)
     
     """
     def new(self, **kwargs):
@@ -1342,5 +1338,34 @@ class Contacts(wxf.ContactEdit, GenericPanelActions):
 
 
 class Summary(wxf.Summary):
-    def __init__(self, parent, base, **kwargs):
-        super().__init__(parent)
+    def __init__(self, parent, tab_name, base, tables, status):
+        super().__init__(parent, name=tab_name)
+        self.base = base
+        self.tables = tables
+        self.__summary_init()
+    
+    def __summary_init(self):
+        
+        account_data = self.base.data.get(self.tables[0], None)
+        transaction_data = self.base.data.get(self.tables[1], None)
+        if account_data.rowcount != account_data.sel_rowcount:
+            account_data.process('fetch')
+        if transaction_data.rowcount != transaction_data.sel_rowcount:
+            transaction_data.process('fetch')
+        values = {}
+        values['Income'] = sum(v['amount'] for v in transaction_data.records.values() if v['amount'] > 0)
+        values['Expenditure'] = sum(v['amount'] for v in transaction_data.records.values() if v['amount'] < 0)
+        values['Balance'] = sum(v['amount'] for v in transaction_data.records.values())
+        a_types = set(v['type'] for v in account_data.records.values())
+        for a_type in a_types:
+            values[a_type] = sum(v['amount'] for v in transaction_data.records.values()
+                                 if account_data.records[v['parent']]['account_type'] == a_type)
+        self.summary_cell_values = []
+        for k, v in values.items():
+            self.summary_cell_values.append((wx.StaticText(self, -1, f'{k}:'), wx.EXPAND))
+            self.summary_cell_values.append((wx.TextCtrl(self, value=f'{v}',
+                                                         style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
+        
+        self.summary_sizer.Clear()
+        self.summary_sizer.AddMany(self.summary_cell_values)
+        self.summary_sizer.Layout()

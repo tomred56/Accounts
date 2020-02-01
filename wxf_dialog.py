@@ -21,6 +21,8 @@ class db_sign_in(wx.Dialog):
                            style=wx.DEFAULT_DIALOG_STYLE)
         
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetForegroundColour(wx.Colour(0, 0, 255))
+        self.SetBackgroundColour(wx.Colour(213, 255, 255))
         
         bSizer1 = wx.BoxSizer(wx.VERTICAL)
         
@@ -32,6 +34,8 @@ class db_sign_in(wx.Dialog):
         self.m_staticText1 = wx.StaticText(self, wx.ID_ANY, u"User Name", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText1.Wrap(-1)
         
+        self.m_staticText1.SetForegroundColour(wx.Colour(0, 0, 255))
+        
         fgSizer1.Add(self.m_staticText1, 0, wx.ALL, 5)
         
         self.user_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
@@ -41,6 +45,8 @@ class db_sign_in(wx.Dialog):
         
         self.m_staticText2 = wx.StaticText(self, wx.ID_ANY, u"Password", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText2.Wrap(-1)
+        
+        self.m_staticText2.SetForegroundColour(wx.Colour(0, 0, 255))
         
         fgSizer1.Add(self.m_staticText2, 0, wx.ALL, 5)
         
@@ -52,6 +58,8 @@ class db_sign_in(wx.Dialog):
         self.m_staticText3 = wx.StaticText(self, wx.ID_ANY, u"Host", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText3.Wrap(-1)
         
+        self.m_staticText3.SetForegroundColour(wx.Colour(0, 0, 255))
+        
         fgSizer1.Add(self.m_staticText3, 0, wx.ALL, 5)
         
         self.host_name = wx.TextCtrl(self, wx.ID_ANY, u"localhost", wx.DefaultPosition, wx.DefaultSize,
@@ -61,6 +69,8 @@ class db_sign_in(wx.Dialog):
         
         self.m_staticText4 = wx.StaticText(self, wx.ID_ANY, u"Database", wx.DefaultPosition, wx.DefaultSize, 0)
         self.m_staticText4.Wrap(-1)
+        
+        self.m_staticText4.SetForegroundColour(wx.Colour(0, 0, 255))
         
         fgSizer1.Add(self.m_staticText4, 0, wx.ALL, 5)
         
@@ -101,10 +111,15 @@ class db_sign_in(wx.Dialog):
         self.progress = wx.Gauge(self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize,
                                  wx.GA_HORIZONTAL | wx.GA_SMOOTH)
         self.progress.SetValue(0)
+        self.progress.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        self.progress.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        
         bSizer2.Add(self.progress, 0, wx.ALL | wx.EXPAND, 5)
         
         self.message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                    wx.TE_MULTILINE | wx.TE_READONLY)
+        self.message.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        
         bSizer2.Add(self.message, 1, wx.ALL | wx.EXPAND, 5)
         
         bSizer1.Add(bSizer2, 1, wx.EXPAND, 10)

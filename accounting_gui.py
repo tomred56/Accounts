@@ -85,7 +85,7 @@ class BaseWindow(wxf.MainFrame):
         self.grandparent_table = self.data.get(ANCESTORS[self.this_table_name][1], None)
 
     #        self.__rows_refresh()
-    #        self.__main_refresh()
+    #        self.main_refresh()
 
     def __summary_init(self):
     

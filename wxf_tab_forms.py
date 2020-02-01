@@ -26,8 +26,8 @@ class MainFrame(wx.Frame):
                           size=wx.Size(-1, -1), style=wx.DEFAULT_FRAME_STYLE | wx.BORDER_THEME | wx.TAB_TRAVERSAL)
         
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
-        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT))
-        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+        self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
+        self.SetBackgroundColour(wx.Colour(213, 255, 255))
         
         self.main_menu = wx.MenuBar(0)
         self.file_menu = wx.Menu()
@@ -2219,9 +2219,14 @@ class TreeManager(wx.Panel):
                  name=wx.EmptyString):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
+        self.SetBackgroundColour(wx.Colour(213, 255, 255))
+        
         tree_top = wx.BoxSizer(wx.VERTICAL)
         
-        self.tree_trunk = wx.TreeCtrl(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
+        self.tree_tree = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        bSizer50 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.tree_trunk = wx.TreeCtrl(self.tree_tree, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
                                       wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT | wx.BORDER_SUNKEN)
         self.tree_menu = wx.Menu()
         self.m_add_peer = wx.MenuItem(self.tree_menu, wx.ID_ANY, u"Add Peer" + u"\t" + u"alt-1", wx.EmptyString,
@@ -2234,10 +2239,17 @@ class TreeManager(wx.Panel):
         
         self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.tree_trunkOnContextMenu)
         
-        tree_top.Add(self.tree_trunk, 1, wx.ALL | wx.EXPAND, 5)
+        bSizer50.Add(self.tree_trunk, 1, wx.ALL | wx.EXPAND, 5)
+        
+        self.tree_tree.SetSizer(bSizer50)
+        self.tree_tree.Layout()
+        bSizer50.Fit(self.tree_tree)
+        tree_top.Add(self.tree_tree, 1, wx.EXPAND | wx.ALL, 5)
         
         self.tree_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
                                    wx.BORDER_SIMPLE | wx.TAB_TRAVERSAL)
+        self.tree_panel.SetBackgroundColour(wx.Colour(244, 255, 255))
+        
         panel_top = wx.BoxSizer(wx.VERTICAL)
         
         self.panel_heading = wx.StaticText(self.tree_panel, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize,
@@ -2365,12 +2377,20 @@ class TreeManager(wx.Panel):
         buttons_sizer.Fit(self.tree_buttons)
         tree_top.Add(self.tree_buttons, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
+        self.tree_message = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        bSizer49 = wx.BoxSizer(wx.VERTICAL)
+        
+        self.p_message = wx.TextCtrl(self.tree_message, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE)
         self.p_message.Enable(False)
         self.p_message.Hide()
         
-        tree_top.Add(self.p_message, 0, wx.ALL | wx.EXPAND, 5)
+        bSizer49.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        
+        self.tree_message.SetSizer(bSizer49)
+        self.tree_message.Layout()
+        bSizer49.Fit(self.tree_message)
+        tree_top.Add(self.tree_message, 0, wx.EXPAND | wx.ALL, 5)
         
         self.SetSizer(tree_top)
         self.Layout()
@@ -2378,7 +2398,7 @@ class TreeManager(wx.Panel):
         
         # Connect Events
         self.tree_trunk.Bind(wx.EVT_LEFT_DCLICK, self.on_edit)
-        self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.on_taxo_rdown)
+        self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.on_rdown)
         self.tree_trunk.Bind(wx.EVT_TREE_ITEM_MENU, self.on_menu_called)
         self.tree_trunk.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.on_menu)
         self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_changed_branch)
@@ -2403,7 +2423,7 @@ class TreeManager(wx.Panel):
     def on_edit(self, event):
         event.Skip()
     
-    def on_taxo_rdown(self, event):
+    def on_rdown(self, event):
         event.Skip()
     
     def on_menu_called(self, event):
