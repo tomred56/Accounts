@@ -2244,7 +2244,7 @@ class TreeManager(wx.Panel):
         self.tree_tree.SetSizer(bSizer50)
         self.tree_tree.Layout()
         bSizer50.Fit(self.tree_tree)
-        tree_top.Add(self.tree_tree, 1, wx.EXPAND | wx.ALL, 5)
+        tree_top.Add(self.tree_tree, 3, wx.EXPAND | wx.ALL, 5)
         
         self.tree_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
                                    wx.BORDER_SIMPLE | wx.TAB_TRAVERSAL)
@@ -2378,31 +2378,31 @@ class TreeManager(wx.Panel):
         tree_top.Add(self.tree_buttons, 0, wx.ALL | wx.EXPAND, 5)
         
         self.tree_message = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
+        self.tree_message.Enable(False)
+        self.tree_message.Hide()
+        
         bSizer49 = wx.BoxSizer(wx.VERTICAL)
         
         self.p_message = wx.TextCtrl(self.tree_message, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                     wx.TE_MULTILINE | wx.TE_READONLY | wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE)
+                                     wx.TE_MULTILINE | wx.BORDER_THEME | wx.FULL_REPAINT_ON_RESIZE)
         self.p_message.Enable(False)
-        self.p_message.Hide()
         
         bSizer49.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
         self.tree_message.SetSizer(bSizer49)
         self.tree_message.Layout()
         bSizer49.Fit(self.tree_message)
-        tree_top.Add(self.tree_message, 0, wx.EXPAND | wx.ALL, 5)
+        tree_top.Add(self.tree_message, 0, wx.ALL | wx.EXPAND, 5)
         
         self.SetSizer(tree_top)
         self.Layout()
         tree_top.Fit(self)
         
         # Connect Events
-        self.tree_trunk.Bind(wx.EVT_LEFT_DCLICK, self.on_edit)
-        self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.on_rdown)
-        self.tree_trunk.Bind(wx.EVT_TREE_ITEM_MENU, self.on_menu_called)
-        self.tree_trunk.Bind(wx.EVT_TREE_ITEM_RIGHT_CLICK, self.on_menu)
+        self.tree_trunk.Bind(wx.EVT_LEFT_DCLICK, self.on_left_double)
+        self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.on_right_down)
         self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGED, self.on_changed_branch)
-        self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_change_branch)
+        self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_changing_branch)
         self.Bind(wx.EVT_MENU, self.on_menu_item, id=self.m_add_peer.GetId())
         self.Bind(wx.EVT_MENU, self.on_menu_item, id=self.m_add_child.GetId())
         self.name.Bind(wx.EVT_TEXT, self.on_edited)
@@ -2420,22 +2420,16 @@ class TreeManager(wx.Panel):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_edit(self, event):
+    def on_left_double(self, event):
         event.Skip()
     
-    def on_rdown(self, event):
-        event.Skip()
-    
-    def on_menu_called(self, event):
-        event.Skip()
-    
-    def on_menu(self, event):
+    def on_right_down(self, event):
         event.Skip()
     
     def on_changed_branch(self, event):
         event.Skip()
     
-    def on_change_branch(self, event):
+    def on_changing_branch(self, event):
         event.Skip()
     
     def on_menu_item(self, event):

@@ -267,14 +267,8 @@ class DataTables:
         key = kwargs.get('key', 0)
         if is_valid := self._validate(action='update', **kwargs):
             if is_valid := self._update_sql(**kwargs):
-                for child in DESCENDANTS[self.table_name]:
-                    if is_valid := self._cascade_sql(child, parent=key, **kwargs):
-                        for grandchild in DESCENDANTS[child]:
-                            is_valid = self._cascade_sql(grandchild, **kwargs)
-            if is_valid:
                 if is_valid := self._execute_sql('update'):
                     self.__fetch_rebuild()
-    
         return is_valid
 
     def __instance_swap(self, parent, *args):

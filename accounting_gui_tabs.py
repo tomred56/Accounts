@@ -30,20 +30,21 @@ TX_EDIT = 1
 TX_ADD_PEER = 2
 TX_ADD_CHILD = 4
 TX_CHANGED = 8
-TX_UNUSED1 = 16
+TX_MOVING = 16
 TX_UNUSED2 = 32
 TX_UNUSED3 = 64
 TX_UNUSED4 = 128
 TX_RESET = 256
 
 
-def set_message(self, fields=(0,), values=('',), message=None):
+def set_message(self, fields=(0,), values=('',), message=None, retain=False):
     '''
     set status and local message fields
     :param self: local message owner (if not top window assumes self.base points to top window)
     :param fields: tuple of status bar fields to update: -1 (or any -ve value) = all, 0 = none (default)
     :param values: tuple of status bar field values: if no matching value for field set to blank
     :param message: string displayed in self.p_message, none to leave unchanged (default)
+    :param retain: if true, message is prepended to existing contents of p_message (default:False)
     :return:
     '''
     frame = getattr(self, 'base', self)
@@ -61,11 +62,14 @@ def set_message(self, fields=(0,), values=('',), message=None):
             frame.SetStatusText(status_msg, fields[i])
     if getattr(self, 'p_message', None):
         if isinstance(message, str):
+            if retain:
+                message += f'\n{self.p_message.GetValue()}'
             self.p_message.SetValue(message)
-            if message:
-                self.p_message.Show()
-            else:
-                self.p_message.Hide()
+        if self.p_message.GetValue():
+            self.tree_message.Show()
+        else:
+            self.tree_message.Hide()
+    self.Layout()
 
 
 class BaseWindow(wxf.MainFrame):
@@ -278,7 +282,7 @@ class BaseWindow(wxf.MainFrame):
             self.single_panel.new()
         elif self.is_edit:
             self.single_panel.update()
-        set_message(self, self, (1,))
+        set_message(self, (1,))
         self.__single_reset()
     
     def __single_reset(self):
@@ -344,7 +348,7 @@ class SelectBranch(wx.Dialog):
     def __init__(self, parent, selections, label=''):
         super().__init__(parent)
         boxer = wx.BoxSizer()
-        self.radio_box = wx.RadioBox(self, wx.ID_ANY, choices=selections)
+        self.radio_box = wx.RadioBox(self, wx.ID_ANY, choices=list(selections))
         self.radio_box.SetSelection(0)
         if label:
             self.radio_box.SetLabel(label)
@@ -359,6 +363,7 @@ class SelectBranch(wx.Dialog):
         self.Centre(wx.BOTH)
         
         # Connect Events
+        self.Bind(wx.EVT_CLOSE, self.on_selection)
         self.radio_box.Bind(wx.EVT_RADIOBOX, self.on_selection)
     
     def __del__(self):
@@ -467,13 +472,13 @@ class TreeManagement(wxf.TreeManager):
             else:
                 self.__get_changes('add', self.tables[0])
         self.__tree_accel()
-        self._button_refresh()
+        self._button_refresh(enable=('new', 'edit'))
         self.Layout()
         return tree.GetSelection()
     
     def __redraw(self):
         tree = self.tree_trunk
-        branch = tree.Selection()
+        branch = tree.GetSelection()
         info = tree.GetItemData(branch)
         levels = info.get('levels', ())
         data = info.get('data')
@@ -489,7 +494,7 @@ class TreeManagement(wxf.TreeManager):
             tree.SelectItem(branch)
             tree.SetFocusedItem(branch)
             self.status = TX_CLEAN
-            self._button_refresh()
+            self._button_refresh(enable=('new', 'edit'))
             self.name.SetLabelText('')
             self.tree_panel.Hide()
         elif self.status & TX_ADD_PEER:
@@ -564,62 +569,65 @@ class TreeManagement(wxf.TreeManager):
         is_valid = True
     
         tree = self.tree_trunk
+        branch = tree.GetSelection()
+        info = tree.GetItemData(branch)
+        levels = info['levels']
+        data = info['data']
         panel = self.tree_panel
-        this_panel = {v[0]: f'{v[0]}' for v in self.this_table.columns
-                      if hasattr(panel, f'p_{v[0]}')}
+        table = self.base.data[levels[0]]
+        this_panel = {v[0]: f'{v[0]}' for v in table.columns
+                      if hasattr(self, f'{v[0]}')}
         if self.status & TX_EDIT:
-            row = self.branch_data
+            row = data
         else:
             row = {}
         new_data = {}
-        for v in self.this_table.columns:
+        for v in table.columns:
             p_field = None
             new_value = None
             if v[0] in this_panel.keys():
-                p_field = getattr(panel, this_panel[v[0]], '')
-                if v[0] == 'name':
-                    new_value = p_field.GetValue().title()
-                    if new_value == '':
-                        is_valid = False
-                        set_message(self, (1,), ('error detected',), message=f'description cannot be blank')
-                else:
-                    new_value = p_field.GetValue()
+                p_field = getattr(self, this_panel[v[0]])
+                new_value = p_field.GetValue()
+                if v[0] == 'name' and not new_value:
+                    is_valid = False
+                    set_message(self, (1,), ('error detected',), message=f'description cannot be blank')
+                if self.status & (TX_ADD_CHILD | TX_ADD_PEER) or new_value != row.get(v[0], None):
+                    if isinstance(p_field, wx._adv.DatePickerCtrl):
+                        new_data[v[0]] = new_value.FormatISODate()
+                    else:
+                        new_data[v[0]] = new_value
             elif v[0] == 'key':
                 if self.status & TX_EDIT:
-                    new_value = self.branch_data['key']
+                    new_data['key'] = data['key']
                 else:
                     continue
             elif v[0] == 'sort':
                 if self.status & TX_ADD_CHILD:
-                    new_value = self.branch_data['sort'] * 1000 + 1
+                    children = tree.GetChildrenCount(branch, False)
+                    new_data['sort'] = (data['sort'] * 1000) + children + 1
                 elif self.status & TX_ADD_PEER:
-                    new_value = self.branch_data['sort'] + 1
+                    new_data['sort'] = data['sort'] + 1
                 else:
                     continue
             elif v[0] == 'parent':
                 if self.status & TX_ADD_CHILD:
-                    new_value = self.branch_data['key']
+                    new_data['parent'] = data['key']
                 elif self.status & TX_ADD_PEER:
-                    new_value = self.parent_branch_data['key']
+                    new_data['parent'] = self.parent_branch_data['key']
                 else:
                     continue
             elif v[0] == 'grandparent':
                 if self.status & TX_ADD_CHILD:
-                    new_value = self.parent_branch_data['key']
+                    new_data['grandparent'] = self.parent_branch_data['key']
                 elif self.status & TX_ADD_PEER:
                     grandparent_branch = tree.GetItemParent(self.parent_branch)
                     grandparent_branch_data = tree.GetData(grandparent_branch)
-                    new_value = grandparent_branch_data['key']
+                    new_data['grandparent'] = grandparent_branch_data['key']
                 else:
                     continue
             else:
-                new_value = v[2]
+                new_data[v[0]] = v[2]
             
-            if self.status & (TX_ADD_CHILD | TX_ADD_PEER) or new_value != row.get(v[0], None):
-                if isinstance(p_field, wx._adv.DatePickerCtrl):
-                    new_data[v[0]] = new_value.FormatISODate()
-                else:
-                    new_data[v[0]] = new_value
         if is_valid:
             if self.status & TX_EDIT:
                 action = 'update'
@@ -631,7 +639,7 @@ class TreeManagement(wxf.TreeManager):
                 self.this_table.process('fetch')
                 self.status = TX_CLEAN
         if not is_valid:
-            set_message(self, (1,), ('Error detected',), message=self.this_table.get_message())
+            set_message(self, (1,), ('Error detected',), message=self.this_table.get_message(), retain=True)
         # self.main_refresh()
         return is_valid
     
@@ -649,7 +657,7 @@ class TreeManagement(wxf.TreeManager):
             parent_branch = self.tree_trunk.GetItemParent(branch1)
             self.__load_branches(branch=parent_branch, levels=levels)
         else:
-            set_message(self, (1,), (f'error swapping branches',))
+            set_message(self, (1,), (f'error swapping branches',), self.this_table.get_message())
     
     def __activate_table(self, activate_this):
         assert activate_this in self.base.data.keys(), f'{activate_this} is not a valid table name'
@@ -698,23 +706,27 @@ class TreeManagement(wxf.TreeManager):
     
     def on_key_up(self, event):
         if not self.status:
+            self.status = TX_MOVING
             tree = self.tree_trunk
             new_pos = tree.GetPrevSibling(self.branch)
             if new_pos.IsOk():
                 self.__swap(self.branch, new_pos)
             else:
                 set_message(self, (1,), ('already at top',))
+            self.status = TX_CLEAN
         print(f'Alt-up key press')
         event.Skip()
     
     def on_key_down(self, event):
         if not self.status:
+            self.status = TX_MOVING
             tree = self.tree_trunk
             new_pos = tree.GetNextSibling(self.branch)
             if new_pos.IsOk():
                 self.__swap(self.branch, new_pos)
             else:
                 set_message(self, (1,), ('already at bottom',))
+            self.status = TX_CLEAN
         print(f'Alt-down key press')
         event.Skip()
     
@@ -869,7 +881,7 @@ class TreeManagement(wxf.TreeManager):
         self.__apply()
     
     def on_cancel_button(self, event):
-        current = self.tree_trunk.Selection()
+        current = self.tree_trunk.GetSelection()
         self.__tree_init()
         self.tree_trunk.SelectItem(current)
         self.tree_trunk.SetFocusedItem(current)
@@ -889,7 +901,7 @@ class TreeManagement(wxf.TreeManager):
             self.is_tab_dirty = False
             self.Unbind(wx.EVT_TREE_SEL_CHANGED)
             self.Unbind(wx.EVT_TREE_SEL_CHANGING)
-        event.Skip()
+            self.base.on_exit_button(None)
 
 class GenericPanelActions:
     def __init__(self, **kwargs):
