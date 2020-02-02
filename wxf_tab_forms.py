@@ -41,15 +41,15 @@ class MainFrame(wx.Frame):
         
         self.SetMenuBar(self.main_menu)
         
-        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.top_sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.p_notebook = wx.Notebook(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
         
-        self.main_sizer.Add(self.p_notebook, 1, wx.EXPAND | wx.ALL, 5)
+        self.top_sizer.Add(self.p_notebook, 1, wx.EXPAND | wx.ALL, 5)
         
-        self.SetSizer(self.main_sizer)
+        self.SetSizer(self.top_sizer)
         self.Layout()
-        self.main_sizer.Fit(self)
+        self.top_sizer.Fit(self)
         self.status_bar = self.CreateStatusBar(3, wx.STB_DEFAULT_STYLE | wx.BORDER_RAISED, wx.ID_ANY)
         
         self.Centre(wx.BOTH)
@@ -96,7 +96,7 @@ class SupplierEdit(wx.Panel):
                     False, wx.EmptyString))
         self.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
         
-        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
+        self.top_sizer = wx.BoxSizer(wx.VERTICAL)
         
         fgSizer2 = wx.FlexGridSizer(0, 2, 0, 0)
         fgSizer2.AddGrowableCol(1)
@@ -122,10 +122,10 @@ class SupplierEdit(wx.Panel):
         self.p_web.SetMaxLength(80)
         fgSizer2.Add(self.p_web, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.bSizer_top.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.top_sizer.Add(fgSizer2, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
         self.m_staticline51 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        self.bSizer_top.Add(self.m_staticline51, 0, wx.EXPAND, 5)
+        self.top_sizer.Add(self.m_staticline51, 0, wx.EXPAND, 5)
         
         bSizer_panels = wx.BoxSizer(wx.HORIZONTAL)
         
@@ -210,13 +210,13 @@ class SupplierEdit(wx.Panel):
         
         bSizer_panels.Add(bSizer49, 0, wx.EXPAND, 5)
         
-        self.bSizer_top.Add(bSizer_panels, 0, wx.EXPAND, 5)
+        self.top_sizer.Add(bSizer_panels, 0, wx.EXPAND, 5)
         
         self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
                                      wx.TE_MULTILINE | wx.TE_READONLY)
         self.p_message.Hide()
         
-        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
+        self.top_sizer.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
         
         tab_suppliers_top = wx.BoxSizer(wx.VERTICAL)
         
@@ -459,11 +459,11 @@ class SupplierEdit(wx.Panel):
         buttons_sizer2.Fit(self.tree_buttons1)
         tab_suppliers_top.Add(self.tree_buttons1, 0, wx.EXPAND | wx.ALL, 5)
         
-        self.bSizer_top.Add(tab_suppliers_top, 1, wx.EXPAND, 5)
+        self.top_sizer.Add(tab_suppliers_top, 1, wx.EXPAND, 5)
         
-        self.SetSizer(self.bSizer_top)
+        self.SetSizer(self.top_sizer)
         self.Layout()
-        self.bSizer_top.Fit(self)
+        self.top_sizer.Fit(self)
         
         # Connect Events
         self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
@@ -1001,107 +1001,93 @@ class AccountEdit(wx.Panel):
 
 
 ###########################################################################
-## Class CategoryEdit
+## Class TaxonomyEdit
 ###########################################################################
 
-class CategoryEdit(wx.Panel):
+class TaxonomyEdit(wx.Panel):
     
     def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.Size(-1, -1),
                  style=wx.BORDER_THEME | wx.TAB_TRAVERSAL, name=u"categories"):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        self.bSizer_top = wx.BoxSizer(wx.VERTICAL)
+        self.top_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        fgSizer21 = wx.FlexGridSizer(1, 2, 0, 0)
-        fgSizer21.AddGrowableCol(1)
-        fgSizer21.SetFlexibleDirection(wx.HORIZONTAL)
-        fgSizer21.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
+        self.panel_heading = wx.StaticText(self, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.panel_heading.Wrap(-1)
         
-        self.m_staticText11 = wx.StaticText(self, wx.ID_ANY, u"Description", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.m_staticText11.Wrap(-1)
+        self.panel_heading.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
+        self.panel_heading.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
         
-        fgSizer21.Add(self.m_staticText11, 0, wx.ALL | wx.EXPAND, 5)
+        self.top_sizer.Add(self.panel_heading, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.p_name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1), 0)
-        self.p_name.SetMaxLength(80)
-        fgSizer21.Add(self.p_name, 1, wx.ALL | wx.EXPAND, 5)
+        fgSizer211 = wx.FlexGridSizer(1, 2, 0, 0)
+        fgSizer211.AddGrowableCol(1)
+        fgSizer211.SetFlexibleDirection(wx.HORIZONTAL)
+        fgSizer211.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
         
-        self.bSizer_top.Add(fgSizer21, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
+        self.m_staticText113 = wx.StaticText(self, wx.ID_ANY, u"Description", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.m_staticText113.Wrap(-1)
         
-        self.m_staticline5 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        self.bSizer_top.Add(self.m_staticline5, 0, wx.EXPAND, 5)
+        fgSizer211.Add(self.m_staticText113, 0, wx.ALL | wx.EXPAND, 5)
         
-        bSizer_panels1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.name = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
+                                wx.TE_PROCESS_ENTER)
+        self.name.SetMaxLength(80)
+        fgSizer211.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
         
-        gSizer_left1 = wx.GridSizer(5, 2, 10, 10)
+        self.top_sizer.Add(fgSizer211, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
         
-        gSizer_left1.Add((0, 0), 1, wx.EXPAND, 5)
+        self.m_staticline53 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
+        self.top_sizer.Add(self.m_staticline53, 0, wx.EXPAND, 5)
         
-        bSizer_panels1.Add(gSizer_left1, 1, wx.EXPAND, 5)
+        bSizer_panels11 = wx.BoxSizer(wx.HORIZONTAL)
+        
+        bSizer_panels11.Add((0, 0), 1, wx.EXPAND, 5)
         
         self.m_staticline7 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_VERTICAL)
-        bSizer_panels1.Add(self.m_staticline7, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        bSizer_panels11.Add(self.m_staticline7, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         
-        bSizer49 = wx.BoxSizer(wx.VERTICAL)
+        self.m_staticText512 = wx.StaticText(self, wx.ID_ANY, u"Dates Active", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.m_staticText512.Wrap(-1)
         
-        bSizer49.Add((0, 0), 1, wx.EXPAND, 5)
+        bSizer_panels11.Add(self.m_staticText512, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        fgSizer23 = wx.FlexGridSizer(0, 3, 0, 0)
-        fgSizer23.AddGrowableCol(1)
-        fgSizer23.AddGrowableCol(2)
-        fgSizer23.SetFlexibleDirection(wx.HORIZONTAL)
-        fgSizer23.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
-        
-        self.m_staticText51 = wx.StaticText(self, wx.ID_ANY, u"Dates Active", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.m_staticText51.Wrap(-1)
-        
-        fgSizer23.Add(self.m_staticText51, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
-        self.p_start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
-                                                  wx.DefaultSize,
-                                                  wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.p_start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        
-        self.p_end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+        self.start_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
                                                 wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        fgSizer23.Add(self.p_end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        bSizer_panels11.Add(self.start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        bSizer49.Add(fgSizer23, 0, wx.ALIGN_BOTTOM, 5)
+        self.m_staticText86 = wx.StaticText(self, wx.ID_ANY, u"To", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.m_staticText86.Wrap(-1)
         
-        bSizer_panels1.Add(bSizer49, 1, wx.EXPAND, 5)
+        bSizer_panels11.Add(self.m_staticText86, 0, wx.ALIGN_CENTER | wx.ALL, 5)
         
-        self.bSizer_top.Add(bSizer_panels1, 0, wx.EXPAND, 5)
+        self.end_date = wx.adv.DatePickerCtrl(self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize,
+                                              wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
+        bSizer_panels11.Add(self.end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         
-        self.m_staticline6 = wx.StaticLine(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL)
-        self.bSizer_top.Add(self.m_staticline6, 0, wx.EXPAND, 5)
+        self.top_sizer.Add(bSizer_panels11, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.p_message = wx.TextCtrl(self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize,
-                                     wx.TE_MULTILINE | wx.TE_READONLY)
-        self.p_message.Hide()
-        
-        self.bSizer_top.Add(self.p_message, 1, wx.ALL | wx.EXPAND, 5)
-        
-        self.SetSizer(self.bSizer_top)
+        self.SetSizer(self.top_sizer)
         self.Layout()
-        self.bSizer_top.Fit(self)
+        self.top_sizer.Fit(self)
         
         # Connect Events
-        self.p_name.Bind(wx.EVT_TEXT, self.on_text)
-        self.p_start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_start_date)
-        self.p_end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_end_date)
+        self.name.Bind(wx.EVT_TEXT, self.on_edited)
+        self.name.Bind(wx.EVT_TEXT_ENTER, self.on_enter)
+        self.start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_edited)
+        self.end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_edited)
     
     def __del__(self):
         pass
     
     # Virtual event handlers, overide them in your derived class
-    def on_text(self, event):
+    def on_edited(self, event):
         event.Skip()
     
-    def on_start_date(self, event):
+    def on_enter(self, event):
         event.Skip()
-    
-    def on_end_date(self, event):
-        event.Skip()
+
+
 
 
 ###########################################################################
@@ -2221,10 +2207,10 @@ class TreeManager(wx.Panel):
         
         self.SetBackgroundColour(wx.Colour(213, 255, 255))
         
-        tree_top = wx.BoxSizer(wx.VERTICAL)
+        self.top_sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.tree_tree = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
-        bSizer50 = wx.BoxSizer(wx.VERTICAL)
+        self.tree_sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.tree_trunk = wx.TreeCtrl(self.tree_tree, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
                                       wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT | wx.BORDER_SUNKEN)
@@ -2239,84 +2225,18 @@ class TreeManager(wx.Panel):
         
         self.tree_trunk.Bind(wx.EVT_RIGHT_DOWN, self.tree_trunkOnContextMenu)
         
-        bSizer50.Add(self.tree_trunk, 1, wx.ALL | wx.EXPAND, 5)
+        self.tree_sizer.Add(self.tree_trunk, 1, wx.ALL | wx.EXPAND, 5)
         
-        self.tree_tree.SetSizer(bSizer50)
+        self.tree_tree.SetSizer(self.tree_sizer)
         self.tree_tree.Layout()
-        bSizer50.Fit(self.tree_tree)
-        tree_top.Add(self.tree_tree, 3, wx.EXPAND | wx.ALL, 5)
+        self.tree_sizer.Fit(self.tree_tree)
+        self.top_sizer.Add(self.tree_tree, 1, wx.EXPAND | wx.ALL, 5)
         
         self.tree_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
                                    wx.BORDER_SIMPLE | wx.TAB_TRAVERSAL)
         self.tree_panel.SetBackgroundColour(wx.Colour(244, 255, 255))
         
-        panel_top = wx.BoxSizer(wx.VERTICAL)
-        
-        self.panel_heading = wx.StaticText(self.tree_panel, wx.ID_ANY, u"MyLabel", wx.DefaultPosition, wx.DefaultSize,
-                                           0)
-        self.panel_heading.Wrap(-1)
-        
-        self.panel_heading.SetForegroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
-        self.panel_heading.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_ACTIVECAPTION))
-        
-        panel_top.Add(self.panel_heading, 0, wx.ALL | wx.EXPAND, 5)
-        
-        fgSizer211 = wx.FlexGridSizer(1, 2, 0, 0)
-        fgSizer211.AddGrowableCol(1)
-        fgSizer211.SetFlexibleDirection(wx.HORIZONTAL)
-        fgSizer211.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_NONE)
-        
-        self.m_staticText113 = wx.StaticText(self.tree_panel, wx.ID_ANY, u"Description", wx.DefaultPosition,
-                                             wx.DefaultSize, 0)
-        self.m_staticText113.Wrap(-1)
-        
-        fgSizer211.Add(self.m_staticText113, 0, wx.ALL | wx.EXPAND, 5)
-        
-        self.name = wx.TextCtrl(self.tree_panel, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.Size(-1, -1),
-                                wx.TE_PROCESS_ENTER)
-        self.name.SetMaxLength(80)
-        fgSizer211.Add(self.name, 1, wx.ALL | wx.EXPAND, 5)
-        
-        panel_top.Add(fgSizer211, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 5)
-        
-        self.m_staticline53 = wx.StaticLine(self.tree_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                            wx.LI_HORIZONTAL)
-        panel_top.Add(self.m_staticline53, 0, wx.EXPAND, 5)
-        
-        bSizer_panels11 = wx.BoxSizer(wx.HORIZONTAL)
-        
-        bSizer_panels11.Add((0, 0), 1, wx.EXPAND, 5)
-        
-        self.m_staticline7 = wx.StaticLine(self.tree_panel, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                           wx.LI_VERTICAL)
-        bSizer_panels11.Add(self.m_staticline7, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
-        
-        self.m_staticText512 = wx.StaticText(self.tree_panel, wx.ID_ANY, u"Dates Active", wx.DefaultPosition,
-                                             wx.DefaultSize, 0)
-        self.m_staticText512.Wrap(-1)
-        
-        bSizer_panels11.Add(self.m_staticText512, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
-        self.start_date = wx.adv.DatePickerCtrl(self.tree_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
-                                                wx.DefaultSize,
-                                                wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        bSizer_panels11.Add(self.start_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        
-        self.m_staticText86 = wx.StaticText(self.tree_panel, wx.ID_ANY, u"To", wx.DefaultPosition, wx.DefaultSize, 0)
-        self.m_staticText86.Wrap(-1)
-        
-        bSizer_panels11.Add(self.m_staticText86, 0, wx.ALIGN_CENTER | wx.ALL, 5)
-        
-        self.end_date = wx.adv.DatePickerCtrl(self.tree_panel, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition,
-                                              wx.DefaultSize, wx.adv.DP_DEFAULT | wx.adv.DP_DROPDOWN | wx.BORDER_SIMPLE)
-        bSizer_panels11.Add(self.end_date, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        
-        panel_top.Add(bSizer_panels11, 0, wx.ALL | wx.EXPAND, 5)
-        
-        self.tree_panel.SetSizer(panel_top)
-        self.tree_panel.Layout()
-        panel_top.Fit(self.tree_panel)
-        tree_top.Add(self.tree_panel, 0, wx.ALL | wx.EXPAND, 5)
+        self.top_sizer.Add(self.tree_panel, 0, wx.ALL | wx.EXPAND, 5)
         
         self.tree_buttons = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
                                      wx.BORDER_SIMPLE | wx.TAB_TRAVERSAL)
@@ -2375,7 +2295,7 @@ class TreeManager(wx.Panel):
         self.tree_buttons.SetSizer(buttons_sizer)
         self.tree_buttons.Layout()
         buttons_sizer.Fit(self.tree_buttons)
-        tree_top.Add(self.tree_buttons, 0, wx.ALL | wx.EXPAND, 5)
+        self.top_sizer.Add(self.tree_buttons, 0, wx.ALL | wx.EXPAND, 5)
         
         self.tree_message = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL)
         self.tree_message.Enable(False)
@@ -2392,11 +2312,11 @@ class TreeManager(wx.Panel):
         self.tree_message.SetSizer(bSizer49)
         self.tree_message.Layout()
         bSizer49.Fit(self.tree_message)
-        tree_top.Add(self.tree_message, 0, wx.ALL | wx.EXPAND, 5)
+        self.top_sizer.Add(self.tree_message, 0, wx.ALL | wx.EXPAND, 5)
         
-        self.SetSizer(tree_top)
+        self.SetSizer(self.top_sizer)
         self.Layout()
-        tree_top.Fit(self)
+        self.top_sizer.Fit(self)
         
         # Connect Events
         self.tree_trunk.Bind(wx.EVT_LEFT_DCLICK, self.on_left_double)
@@ -2405,10 +2325,6 @@ class TreeManager(wx.Panel):
         self.tree_trunk.Bind(wx.EVT_TREE_SEL_CHANGING, self.on_changing_branch)
         self.Bind(wx.EVT_MENU, self.on_menu_item, id=self.m_add_peer.GetId())
         self.Bind(wx.EVT_MENU, self.on_menu_item, id=self.m_add_child.GetId())
-        self.name.Bind(wx.EVT_TEXT, self.on_edited)
-        self.name.Bind(wx.EVT_TEXT_ENTER, self.on_enter)
-        self.start_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_edited)
-        self.end_date.Bind(wx.adv.EVT_DATE_CHANGED, self.on_edited)
         self.b_new.Bind(wx.EVT_BUTTON, self.on_new_button)
         self.b_edit.Bind(wx.EVT_BUTTON, self.on_edit_button)
         self.b_reset.Bind(wx.EVT_BUTTON, self.on_reset_button)
@@ -2433,12 +2349,6 @@ class TreeManager(wx.Panel):
         event.Skip()
     
     def on_menu_item(self, event):
-        event.Skip()
-    
-    def on_edited(self, event):
-        event.Skip()
-    
-    def on_enter(self, event):
         event.Skip()
     
     def on_new_button(self, event):
@@ -2473,7 +2383,7 @@ class Summary(wx.Panel):
                  name=wx.EmptyString):
         wx.Panel.__init__(self, parent, id=id, pos=pos, size=size, style=style, name=name)
         
-        tab_summary_top = wx.BoxSizer(wx.VERTICAL)
+        self.top_sizer = wx.BoxSizer(wx.VERTICAL)
         
         self.summary_sizer = wx.FlexGridSizer(0, 6, 5, 10)
         self.summary_sizer.AddGrowableCol(0)
@@ -2482,9 +2392,9 @@ class Summary(wx.Panel):
         self.summary_sizer.SetFlexibleDirection(wx.HORIZONTAL)
         self.summary_sizer.SetNonFlexibleGrowMode(wx.FLEX_GROWMODE_SPECIFIED)
         
-        tab_summary_top.Add(self.summary_sizer, 0, wx.ALIGN_CENTER | wx.ALL, 10)
+        self.top_sizer.Add(self.summary_sizer, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         
-        self.SetSizer(tab_summary_top)
+        self.SetSizer(self.top_sizer)
         self.Layout()
     
     def __del__(self):

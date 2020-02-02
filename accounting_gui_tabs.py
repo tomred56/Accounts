@@ -72,6 +72,20 @@ def set_message(self, fields=(0,), values=('',), message=None, retain=False):
     self.Layout()
 
 
+def main_refresh(self, layers=(), focus=None):
+    #        self.p_header.SetLabel(f'Table: {self.this_table_name.capitalize()}')
+    for layer in layers:
+        layer.Layout()
+    # self.main_sizer.Layout()
+    self.Layout()
+    self.SetSizerAndFit(self.top_sizer)
+    self.Centre()
+    self.Show()
+    self.Raise()
+    if focus:
+        focus.SetFocus()
+
+
 class BaseWindow(wxf.MainFrame):
     
     def __init__(self, *args, **kwargs):
@@ -98,8 +112,10 @@ class BaseWindow(wxf.MainFrame):
         }
         self.conn_status = CX_DISCONNECTED
         self.connect()
+        self.Freeze()
         self.__notebook_init()
-        self.main_refresh()
+        self.Thaw()
+        main_refresh(self)
 
     def connect(self):
         with SignInDialog(None, self) as dlg:
@@ -132,7 +148,6 @@ class BaseWindow(wxf.MainFrame):
     
         this_tab = self.p_notebook.FindPage(self.all_tabs['taxonomy'])
         self.p_notebook.SetSelection(this_tab)
-        self.Layout()
 
     def on_changing_page(self, event):
         this_page = self.p_notebook.GetSelection()
@@ -141,19 +156,19 @@ class BaseWindow(wxf.MainFrame):
         if self.conn_status == CX_DISCONNECTED:
             event.Veto()
             set_message(self, (1,), ('Not connected to database',))
-            self.main_refresh()
+            main_refresh(self)
         elif self.all_status[this_label] & TX_CHANGED:
             event.Veto()
             set_message(self, (1,), (f'Unsaved changes on this tab',))
-            self.main_refresh()
+            main_refresh(self)
     
     def on_new_page(self, event):
         this_page = self.p_notebook.GetSelection()
         self.this_notebook_page = self.p_notebook.GetPage(this_page)
         self.this_page_name = self.this_notebook_page.Name.lower()
-
+        
         print(self.this_page_name)
-        self.main_refresh()
+        main_refresh(self)
     
     # def __connect_load(self):
     #     # db.get_structure(self.database)
@@ -292,16 +307,16 @@ class BaseWindow(wxf.MainFrame):
         self.single.Layout()
         self.main_single.Layout()
         self.main_sizer.Show(self.single, True, True)
-        self.main_refresh()
-
-    def main_refresh(self):
-        #        self.p_header.SetLabel(f'Table: {self.this_table_name.capitalize()}')
-        self.main_sizer.Layout()
-        self.Layout()
-        self.SetSizerAndFit(self.main_sizer)
-        self.Centre()
-        self.Show()
-        self.Raise()
+        main_refresh(self)
+    
+    # def main_refresh(self, layers):
+    #     #        self.p_header.SetLabel(f'Table: {self.this_table_name.capitalize()}')
+    #     self.main_sizer.Layout()
+    #     self.Layout()
+    #     self.SetSizerAndFit(self.main_sizer)
+    #     self.Centre()
+    #     self.Show()
+    #     self.Raise()
     
     def on_key_pressed_somewhere(self, e):
         print(f'a key pressed {e}')
@@ -447,6 +462,10 @@ class SignInDialog(wxf_dialog.db_sign_in):
 class TreeManagement(wxf.TreeManager):
     def __init__(self, parent, tab_name, base, tables, status):
         super().__init__(parent, name=tab_name)
+        if tab_name == 'taxonomy':
+            self.tree_panel = TaxonomyPanel(base, self, status)
+        self.top_sizer.Remove(1)
+        self.top_sizer.Insert(1, self.tree_panel, 0, wx.ALL | wx.EXPAND, 5)
         self.parent = parent
         self.tab_name = tab_name
         self.base = base
@@ -457,8 +476,13 @@ class TreeManagement(wxf.TreeManager):
         self._root = None
         self.status = status
         self.branch = self.__tree_init()
+        self.tree_tree.SetSizerAndFit(self.tree_sizer)
+        self.tree_sizer.Layout()
+        self.SetSizerAndFit(self.top_sizer)
+        self.Layout()
     
     def __tree_init(self):
+        panel = self.tree_panel
         tree = self.tree_trunk
         if not self._root:
             self._root = tree.AddRoot(self.tab_name)
@@ -468,15 +492,15 @@ class TreeManagement(wxf.TreeManager):
                 tree.SelectItem(first_item[0])
                 tree.SetFocusedItem(first_item[0])
                 self.status = TX_CLEAN
-                self.tree_panel.Hide()
+                panel.Hide()
             else:
                 self.__get_changes('add', self.tables[0])
         self.__tree_accel()
         self._button_refresh(enable=('new', 'edit'))
-        self.Layout()
         return tree.GetSelection()
     
     def __redraw(self):
+        panel = self.tree_panel
         tree = self.tree_trunk
         branch = tree.GetSelection()
         info = tree.GetItemData(branch)
@@ -495,8 +519,8 @@ class TreeManagement(wxf.TreeManager):
             tree.SetFocusedItem(branch)
             self.status = TX_CLEAN
             self._button_refresh(enable=('new', 'edit'))
-            self.name.SetLabelText('')
-            self.tree_panel.Hide()
+            panel.name.SetLabelText('')
+            panel.Hide()
         elif self.status & TX_ADD_PEER:
             key = self.this_table.get_next() - 1
             new_data = self.this_table.rows[key]
@@ -523,11 +547,12 @@ class TreeManagement(wxf.TreeManager):
             tree.SetFocusedItem(self.branch)
             self.__get_changes('add', levels[1])
         self.__tree_accel()
+        self.SetSizerAndFit(self.top_sizer)
         self.Layout()
-    
+
     def __get_changes(self, action, table):
         assert action in ('add', 'edit'), f'Unrecognised taxonomy action {action} {table} '
-        
+        panel = self.tree_panel
         level = self.branch_level
         branch_data = self.branch_data
         parent_data = self.parent_branch_data
@@ -535,9 +560,9 @@ class TreeManagement(wxf.TreeManager):
         min_date = START_DATE.date()
         max_date = END_DATE.date()
         self.status = TX_CLEAN
-        self.panel_heading.SetLabel(f'{action} {table}'.title())
+        panel.panel_heading.SetLabel(f'{action} {table}'.title())
         if action == 'add':
-            self.name.SetValue('')
+            panel.name.SetValue('')
             if level == table:
                 self.status = TX_ADD_PEER
                 if parent_data:
@@ -549,23 +574,25 @@ class TreeManagement(wxf.TreeManager):
                 max_date = branch_data['end_date']
                 self.__activate_table(table)
                 self.child_branch_level = table
-            self.start_date.SetValue(min_date)
-            self.end_date.SetValue(max_date)
+            panel.start_date.SetValue(min_date)
+            panel.end_date.SetValue(max_date)
         else:
-            self.name.SetValue(branch_data['name'])
-            self.start_date.SetValue(max(min_date, min(max_date, branch_data['start_date'])))
-            self.end_date.SetValue(min(max_date, max(min_date, branch_data['end_date'])))
+            panel.name.SetValue(branch_data['name'])
+            panel.start_date.SetValue(max(min_date, min(max_date, branch_data['start_date'])))
+            panel.end_date.SetValue(min(max_date, max(min_date, branch_data['end_date'])))
             self.status = TX_EDIT
 
-        self.start_date.SetRange(min_date, max_date)
-        self.end_date.SetRange(min_date, max_date)
+        panel.start_date.SetRange(min_date, max_date)
+        panel.end_date.SetRange(min_date, max_date)
         self._button_refresh(enable=('cancel',))
-        self.tree_panel.Show()
-        self.name.SetFocus()
-        self.Layout()
-        # self.main_refresh()
-    
-    def __apply(self):
+        panel.Show()
+        # panel.Layout()
+        # panel.name.SetFocus()
+        # self.Layout()
+        self.SetSizerAndFit(self.top_sizer)
+        main_refresh(self.base, (panel, self), focus=panel.name)
+
+    def _apply(self):
         is_valid = True
     
         tree = self.tree_trunk
@@ -575,8 +602,8 @@ class TreeManagement(wxf.TreeManager):
         data = info['data']
         panel = self.tree_panel
         table = self.base.data[levels[0]]
-        this_panel = {v[0]: f'{v[0]}' for v in table.columns
-                      if hasattr(self, f'{v[0]}')}
+        fields_in_panel = {v[0]: f'{v[0]}' for v in table.columns
+                           if hasattr(panel, f'{v[0]}')}
         if self.status & TX_EDIT:
             row = data
         else:
@@ -585,8 +612,8 @@ class TreeManagement(wxf.TreeManager):
         for v in table.columns:
             p_field = None
             new_value = None
-            if v[0] in this_panel.keys():
-                p_field = getattr(self, this_panel[v[0]])
+            if v[0] in fields_in_panel.keys():
+                p_field = getattr(panel, fields_in_panel[v[0]])
                 new_value = p_field.GetValue()
                 if v[0] == 'name' and not new_value:
                     is_valid = False
@@ -743,23 +770,12 @@ class TreeManagement(wxf.TreeManager):
         levels = branch_info['levels']
         self.__get_changes('edit', levels[0].lower())
     
-    def on_edited(self, event):
-        print('on_edited')
-        if self.status:
-            self.status |= TX_CHANGED
-            self.status ^= TX_RESET
-            self._button_refresh(enable=('reset', 'apply', 'cancel'))
-    
-    def on_enter(self, event):
-        print('on_enter')
-        self.__apply()
-    
     def on_changing_branch(self, event):
         print('on_changing_branch')
         if self.status & TX_CHANGED:
             event.Veto()
             set_message(self, (1,), ('Unsaved Changes',))
-            self.base.main_refresh()
+            main_refresh(self.base, (self.tree_panel, self))
     
     def on_changed_branch(self, event):
         print('on_changed_branch')
@@ -782,13 +798,13 @@ class TreeManagement(wxf.TreeManager):
         self.status = TX_CLEAN
         if self.tree_panel.Shown:
             self.tree_panel.Hide()
-            self.Layout()
+            main_refresh(self.base, (self.tree_panel, self))
     
     def on_right_down(self, event):
         print('on_rdown')
         if self.status & TX_CHANGED:
             set_message(self, (1,), ('Unsaved Changes',))
-            self.base.main_refresh()
+            main_refresh(self.base, (self.tree_panel, self))
         else:
             tree = self.tree_trunk
             pt = event.GetPosition()
@@ -869,17 +885,17 @@ class TreeManagement(wxf.TreeManager):
         branch_level = branch_info.get('level', '')
         levels = branch_info['levels']
         self.__get_changes('edit', levels[0].lower())
-    
+
     def on_reset_button(self, event):
         if self.status & (TX_CHANGED):
-            action = self.panel_heading.GetLabel().lower().split()
+            action = self.tree_panel.panel_heading.GetLabel().lower().split()
             self.__get_changes(action[0], action[1])
         set_message(self, (1,), ('',), message='')
-        self.base.main_refresh()
-    
+        main_refresh(self.base, (self.tree_panel, self))
+
     def on_apply_button(self, event):
-        self.__apply()
-    
+        self._apply()
+
     def on_cancel_button(self, event):
         current = self.tree_trunk.GetSelection()
         self.__tree_init()
@@ -887,15 +903,15 @@ class TreeManagement(wxf.TreeManager):
         self.tree_trunk.SetFocusedItem(current)
         set_message(self, (1,), message='')
         self.tree_panel.Hide()
-        self.Layout()
-        self.base.main_refresh()
-    
+        # self.Layout()
+        main_refresh(self.base, (self.tree_panel, self))
+
     def on_exit_button(self, event):
         if self.status & TX_CHANGED and not self.status & TX_RESET:
             set_message(self, (1,), ('Unsaved changes',),
                         message='Press again to confirm you want to leave without saving changes.')
             self.status |= TX_RESET
-            self.base.main_refresh()
+            main_refresh(self.base, (self.tree_panel, self))
         else:
             self.status = TX_CLEAN
             self.is_tab_dirty = False
@@ -1160,15 +1176,30 @@ class GenericPanelActions:
             self.lookup_lists[field_name][0] = self.lookup_lists[field_name][1][field.GetValue()]
 
 
-class Categories(wxf.CategoryEdit, GenericPanelActions):
-    def __init__(self, base, **kwargs):
+class TaxonomyPanel(wxf.TaxonomyEdit):
+    def __init__(self, base, parent, status):
         super().__init__(base)
-        GenericPanelActions.__init__(self, base=base, child=self)
+        self.parent = parent
+        self.status = status
+        self.SetSizerAndFit(self.top_sizer)
+        self.Layout()
+        # GenericPanelActions.__init__(self, base=base, child=self)
     
+    def on_edited(self, event):
+        print('on_edited')
+        if self.status:
+            self.status |= TX_CHANGED
+            self.status ^= TX_RESET
+            self.parent._button_refresh(enable=('reset', 'apply', 'cancel'))
+    
+    def on_enter(self, event):
+        print('on_enter')
+        self.parent._apply()
+    
+    """
     def _on_lookup(self, event):
         GenericPanelActions._on_lookup(self, event)
     
-    """
     def new(self, **kwargs):
         super().new(**kwargs)
     
@@ -1380,4 +1411,4 @@ class Summary(wxf.Summary):
         
         self.summary_sizer.Clear()
         self.summary_sizer.AddMany(self.summary_cell_values)
-        self.summary_sizer.Layout()
+        main_refresh(self.base, (self,))
