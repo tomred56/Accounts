@@ -1,4 +1,3 @@
-import pymysql.err
 import wx
 import wx.adv
 import wx.grid
@@ -25,6 +24,7 @@ ANCESTORS = db.ANCESTORS
 DESCENDANTS = db.DESCENDANTS
 CX_DISCONNECTED = 0
 CX_CONNECTED = 1
+CX_FAILED = 2
 TX_CLEAN = 0
 TX_EDIT = 1
 TX_ADD_PEER = 2
@@ -87,13 +87,14 @@ def main_refresh(self, layers=(), focus=None):
 
 
 class BaseWindow(wxf.MainFrame):
-    
+
     def __init__(self, *args, **kwargs):
-        
+
         super().__init__(*args, **kwargs)
         # self.Bind(wx.EVT_CHAR_HOOK, self.on_key_pressed_somewhere)
+        self.Hide()
         self.database = None
-        self.database_host = 'localhost'
+        self.database_host = '192.168.0.235'
         self.database_name = 'test'
         self.database_user = 'dermot'
         self.data = {}
@@ -107,26 +108,22 @@ class BaseWindow(wxf.MainFrame):
         self.is_edit = False
         self.all_tabs = {}
         self.all_status = {
-                'summary': TX_CLEAN, 'suppliers': TX_CLEAN, 'accounts': TX_CLEAN,
-                'taxonomy': TX_CLEAN
+            'summary': TX_CLEAN, 'suppliers': TX_CLEAN, 'accounts': TX_CLEAN,
+            'taxonomy': TX_CLEAN
         }
         self.conn_status = CX_DISCONNECTED
-        self.connect()
-        self.Freeze()
-        self.__notebook_init()
-        self.Thaw()
-        main_refresh(self)
+        while self.conn_status == CX_DISCONNECTED:
+            self.connect()
+        if self.conn_status == CX_CONNECTED:
+            self.__notebook_init()
+            main_refresh(self)
+        else:
+            self.on_exit_button(None)
 
     def connect(self):
         with SignInDialog(None, self) as dlg:
             result = dlg.ShowModal()
-            if result == wx.ID_OK:
-                pass
-                # self.__connect_load()
-            elif result == wx.ID_CLOSE and self.conn_status & CX_CONNECTED:
-                pass
-            else:
-                self.on_exit_button(None)
+        return result
 
     def __notebook_init(self):
         self.all_tabs['summary'] = Summary(self.p_notebook, 'summary',
@@ -145,7 +142,7 @@ class BaseWindow(wxf.MainFrame):
         self.p_notebook.AddPage(self.all_tabs['accounts'], 'Accounts')
         self.p_notebook.AddPage(self.all_tabs['taxonomy'], 'Taxonomy')
         self.p_notebook.AddPage(self.all_tabs['summary'], 'Summary')
-    
+
         this_tab = self.p_notebook.FindPage(self.all_tabs['taxonomy'])
         self.p_notebook.SetSelection(this_tab)
 
@@ -161,15 +158,15 @@ class BaseWindow(wxf.MainFrame):
             event.Veto()
             set_message(self, (1,), (f'Unsaved changes on this tab',))
             main_refresh(self)
-    
+
     def on_new_page(self, event):
         this_page = self.p_notebook.GetSelection()
         self.this_notebook_page = self.p_notebook.GetPage(this_page)
         self.this_page_name = self.this_notebook_page.Name.lower()
-        
+
         print(self.this_page_name)
         main_refresh(self)
-    
+
     # def __connect_load(self):
     #     # db.get_structure(self.database)
     #     self.Freeze()
@@ -186,10 +183,10 @@ class BaseWindow(wxf.MainFrame):
     #             'contacts': Contacts(self)
     #     }
     #     self.Thaw()
-    
+
     # def on_user_logon(self, event):
     #     pass
-    
+
     def __activate_table(self, activate_this):
         assert activate_this in self.data.keys(), f'{activate_this} is not a valid table name'
         self.this_table = self.data.get(activate_this, None)
@@ -197,7 +194,7 @@ class BaseWindow(wxf.MainFrame):
         self.grandparent_table = self.data.get(ANCESTORS[activate_this][1], None)
         #        self.__rows_refresh()
         #        self.main_refresh()
-    
+
     def __rows_init(self):
         self.rows_sizer = wx.grid.Grid(self)
         self.rows_sizer.CreateGrid(0, 0)
@@ -206,9 +203,9 @@ class BaseWindow(wxf.MainFrame):
         self.Bind(wx.grid.EVT_GRID_RANGE_SELECT, self.on_row_selected, self.rows_sizer)
         self.Bind(wx.grid.EVT_GRID_CELL_LEFT_DCLICK, self.on_edit_button, self.rows_sizer)
         self.rows.Add(self.rows_sizer, 1, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 5, None)
-    
+
     def __rows_load(self, my_parent=0, my_grandparent=0):
-        
+
         if self.rows_sizer.GetNumberRows():
             self.rows_sizer.DeleteRows(0, self.rows_sizer.GetNumberRows())
         if self.rows_sizer.GetNumberCols():
@@ -224,7 +221,7 @@ class BaseWindow(wxf.MainFrame):
                 self.rows_sizer.SetColFormatNumber(i - 1)
             elif columns[i][1] is float:
                 self.rows_sizer.SetColFormatFloat(i - 1, 10, 2)
-        
+
         if my_parent and (len(filter) != 1 or filter.get('parent', 0) != my_parent):
             self.this_table.process('fetch', parent=my_parent)
         else:
@@ -247,7 +244,7 @@ class BaseWindow(wxf.MainFrame):
             row += 1
         self.rows_sizer.EnableEditing(False)
         self.rows_sizer.AutoSizeColumns(False)
-    
+
     def __rows_refresh(self, my_parent=0, my_grandparent=0):
         self.__rows_load(my_parent=0, my_grandparent=0)
         self.rows_sizer.Layout()
@@ -258,7 +255,7 @@ class BaseWindow(wxf.MainFrame):
             self.b_edit.Enable()
         else:
             self.b_edit.Disable()
-    
+
     def __lookup_name(self, lookup='', key=0):
         table = None
         if lookup == 'parent':
@@ -270,12 +267,12 @@ class BaseWindow(wxf.MainFrame):
         if table.rowcount != len(table.rows):
             table.process('fetch')
         return dict(table.rows.get(key, {})).get('name', 'Description not found')
-    
+
     def __main_single_init(self):
         self.single.Layout()
         self.main_single.Layout()
         self.main_sizer.Show(self.main_single, False, True)
-    
+
     def __single_load(self):
         self.main_sizer.Show(self.rows, False, True)
         self.single.Clear()
@@ -291,7 +288,7 @@ class BaseWindow(wxf.MainFrame):
             self.single_panel.update()
         self.single.Add(self.single_panel)
         self.__single_reset()
-    
+
     def __single_reset_panel(self):
         if self.is_new:
             self.single_panel.new()
@@ -299,16 +296,16 @@ class BaseWindow(wxf.MainFrame):
             self.single_panel.update()
         set_message(self, (1,))
         self.__single_reset()
-    
+
     def __single_reset(self):
-        
+
         self.single_panel.Show(True)
         self.single_panel.Layout()
         self.single.Layout()
         self.main_single.Layout()
         self.main_sizer.Show(self.single, True, True)
         main_refresh(self)
-    
+
     # def main_refresh(self, layers):
     #     #        self.p_header.SetLabel(f'Table: {self.this_table_name.capitalize()}')
     #     self.main_sizer.Layout()
@@ -317,25 +314,25 @@ class BaseWindow(wxf.MainFrame):
     #     self.Centre()
     #     self.Show()
     #     self.Raise()
-    
+
     def on_key_pressed_somewhere(self, e):
         print(f'a key pressed {e}')
         e.Skip()
-    
+
     def on_table_selected(self, event):
         id_selected = event.GetId()
         obj = event.GetEventObject()
         self.__activate_table(obj.GetLabelText(id_selected).lower())
-    
+
     def on_forecast_tool(self, event):
         set_message(self, (1,), ('No action define for this button',))
-    
+
     def on_row_selected(self, e):
         if e.Selecting():
             self.b_edit.Enable()
             self.rows_sizer.cursor = (e.GetTopRow(), e.GetLeftCol())
         e.Skip()
-    
+
     #    def on_date(self, e):
     #        if self.calendar.visible:
     #            self.calendar.Hide()
@@ -345,9 +342,12 @@ class BaseWindow(wxf.MainFrame):
     def on_exit_button(self, event):
         try:
             self.database.close()
-        except (pymysql.err.InternalError, pymysql.err.IntegrityError, pymysql.err.ProgrammingError) as e:
+        except (AttributeError) as e:
             pass
-        self.Close()
+        try:
+            self.Close()
+        except (RuntimeError) as e:
+            pass
 
     def on_status_dclick(self, event):
         place = self.status_bar.GetFieldRect(2)
@@ -362,41 +362,52 @@ class BaseWindow(wxf.MainFrame):
 class SelectBranch(wx.Dialog):
     def __init__(self, parent, selections, label=''):
         super().__init__(parent)
-        boxer = wx.BoxSizer()
+        boxer = wx.BoxSizer(wx.VERTICAL)
+        buttons = wx.BoxSizer()
         self.radio_box = wx.RadioBox(self, wx.ID_ANY, choices=list(selections))
+        self.button_ok = wx.Button(self, id=wx.ID_OK)
+        self.button_cancel = wx.Button(self, id=wx.ID_CANCEL)
+        buttons.Add(self.button_ok, 0, wx.ALL, 5)
+        buttons.Add(self.button_cancel, 0, wx.ALL, 5)
         self.radio_box.SetSelection(0)
         if label:
             self.radio_box.SetLabel(label)
         for i in range(0, len(selections)):
             self.radio_box.SetItemLabel(i, selections[i].capitalize())
         boxer.Add(self.radio_box, 0, wx.ALL, 5)
-        
-        self.SetSizer(boxer)
+        boxer.Add(buttons, 0, wx.ALL, 5)
+
+        self.SetSizerAndFit(boxer)
         self.Layout()
-        boxer.Fit(self)
-        
+
         self.Centre(wx.BOTH)
-        
+
         # Connect Events
-        self.Bind(wx.EVT_CLOSE, self.on_selection)
-        self.radio_box.Bind(wx.EVT_RADIOBOX, self.on_selection)
-    
+        self.Bind(wx.EVT_CLOSE, self.on_cancel)
+        self.button_ok.Bind(wx.EVT_BUTTON, self.on_selection)
+        self.button_cancel.Bind(wx.EVT_BUTTON, self.on_cancel)
+
     def __del__(self):
         pass
-    
+
     def on_selection(self, event):
-        self.EndModal(self.radio_box.GetSelection() - 1)
+        self.EndModal(self.radio_box.GetSelection())
+
+    def on_cancel(self, event):
+        self.EndModal(-1)
 
 
 class SignInDialog(wxf_dialog.db_sign_in):
     def __init__(self, parent, base):
         super().__init__(parent)
         self.base = base
+        self.activity = None
         if base.conn_status & CX_CONNECTED:
             self.b_disconnect.Enable()
             self.b_connect.Disable()
             self.b_test.Disable()
         else:
+            base.conn_status = CX_FAILED
             self.b_connect.Enable()
             self.b_disconnect.Disable()
             self.b_test.Enable()
@@ -405,58 +416,111 @@ class SignInDialog(wxf_dialog.db_sign_in):
         self.host_name.SetValue(base.database_host)
         self.password.SetValue('')
         self.database = base.database
+        self.message1.SetLabel('')
+        self.message0.Hide()
+        self.message1.Hide()
+        self.progress.Hide()
+        self.SetSizerAndFit(self.top_sizer)
         self.Raise()
-    
+
     def on_test_button(self, event):
-        is_valid, message, database = db.select_db(host=self.host_name.GetValue(),
-                                                   use_db=self.use_db.GetValue(),
-                                                   user=self.user_name.GetValue(),
-                                                   password=self.password.GetValue())
-        if is_valid:
-            database.close()
-            self.message.SetValue('connection works')
+        self.activity = 'test'
+        if self.validated():
+            is_valid, message, database = db.select_db(host=self.host_name.GetValue(),
+                                                       use_db=self.use_db.GetValue(),
+                                                       user=self.user_name.GetValue(),
+                                                       password=self.password.GetValue())
+            if is_valid:
+                database.close()
+                self.send_message(CX_CONNECTED, 'connection works')
+                self.base.conn_status = CX_DISCONNECTED
+            else:
+                self.send_message(CX_FAILED, f'error connecting\n{message}')
+                self.base.conn_status = CX_FAILED
         else:
-            self.message.SetValue(f'error connecting\n{message}')
-    
+            self.send_message(CX_FAILED, f'name, host and database must be entered')
+
     def on_connect_button(self, event):
-        is_valid, message, self.database = db.select_db(host=self.host_name.GetValue(),
-                                                        use_db=self.use_db.GetValue(),
-                                                        user=self.user_name.GetValue(),
-                                                        password=self.password.GetValue())
-        if is_valid:
-            self.base.database = self.database
-            self.base.database_host = self.host_name.GetValue()
-            self.base.database_name = self.use_db.GetValue()
-            self.base.database_user = self.user_name.GetValue()
-            db.get_structure(self.database)
-            incr = 99 // (len(db._T_STRUCTURE) + 1)
-            self.progress.SetRange(100)
-            self.progress.SetValue(0)
-            for table in db._T_STRUCTURE.keys():
-                self.base.data[table] = db.DataTables(self.database, table)
-                self.progress.SetValue(self.progress.GetValue() + incr)
-            self.base.conn_status = CX_CONNECTED
-            set_message(self, (2,), ('CONNECTED',), message='')
-            self.EndModal(wx.ID_OK)
+        self.activity = 'connect'
+        if self.validated():
+            is_valid, message, self.database = db.select_db(host=self.host_name.GetValue(),
+                                                            use_db=self.use_db.GetValue(),
+                                                            user=self.user_name.GetValue(),
+                                                            password=self.password.GetValue())
+            if is_valid:
+                self.base.database = self.database
+                self.base.database_host = self.host_name.GetValue()
+                self.base.database_name = self.use_db.GetValue()
+                self.base.database_user = self.user_name.GetValue()
+                db.get_structure(self.database)
+                incr = 99 // (len(db._T_STRUCTURE) + 1)
+                self.progress.SetRange(100)
+                self.progress.SetValue(0)
+                self.progress.Show()
+                for table in db._T_STRUCTURE.keys():
+                    self.base.data[table] = db.DataTables(self.database, table)
+                    self.progress.SetValue(self.progress.GetValue() + incr)
+                self.progress.Hide()
+                self.base.conn_status = CX_CONNECTED
+                set_message(self, (2,), ('CONNECTED',), message='')
+                self.EndModal(CX_CONNECTED)
+            else:
+                self.send_message(CX_FAILED, f'error connecting\n{message}')
+                self.base.conn_status = CX_FAILED
         else:
-            self.message.SetValue(f'error connecting\n{message}')
-    
+            self.send_message(CX_FAILED, f'name, host and database must be entered')
+
     def on_disconnect_button(self, event):
+        self.activity = 'disconnect'
         try:
             self.database.close()
         finally:
             self.base.data = {}
             self.base.conn_status = CX_DISCONNECTED
-            self.message.SetValue(f'not connected')
             self.b_connect.Enable()
             self.b_disconnect.Disable()
             self.b_test.Enable()
-    
+            self.send_message(CX_FAILED, f'not connected')
+
+    def validated(self):
+        is_valid = True
+        if not self.user_name.GetValue() or not self.host_name.GetValue() or not self.use_db.GetValue():
+            self.base.conn_status = CX_FAILED
+            is_valid = False
+        return is_valid
+
+    def send_message(self, status, message):
+        if status == CX_CONNECTED:
+            self.message1.SetForegroundColour(wx.GREEN)
+            self.message0.Hide()
+        else:
+            self.message1.SetForegroundColour(wx.RED)
+            self.message0.Show()
+        self.message1.SetLabel(message)
+        self.message1.Layout()
+        self.message1.Show()
+        self.message_sizer.Layout()
+        self.Layout()
+        self.SetSizerAndFit(self.top_sizer)
+
+    def on_left_dclick(self, event):
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(wx.TextDataObject(self.message1.GetLabelText()))
+            wx.TheClipboard.Close()
+
     def on_cancel_button(self, event):
-        self.EndModal(wx.ID_CLOSE)
-    
+        self.close_dialog()
+
     def on_exit_button(self, event):
-        self.EndModal(wx.ID_CANCEL)
+        if self.base.conn_status != CX_CONNECTED:
+            self.base.conn_status = CX_FAILED
+        self.close_dialog()
+
+    def close_dialog(self):
+        if not self.activity or self.base.conn_status != CX_CONNECTED:
+            self.EndModal(CX_FAILED)
+        else:
+            self.EndModal(self.base.conn_status)
 
 
 class TreeManagement(wxf.TreeManager):
@@ -480,7 +544,7 @@ class TreeManagement(wxf.TreeManager):
         self.tree_sizer.Layout()
         self.SetSizerAndFit(self.top_sizer)
         self.Layout()
-    
+
     def __tree_init(self):
         panel = self.tree_panel
         tree = self.tree_trunk
@@ -498,7 +562,7 @@ class TreeManagement(wxf.TreeManager):
         self.__tree_accel()
         self._button_refresh(enable=('new', 'edit'))
         return tree.GetSelection()
-    
+
     def __redraw(self):
         panel = self.tree_panel
         tree = self.tree_trunk
@@ -594,7 +658,7 @@ class TreeManagement(wxf.TreeManager):
 
     def _apply(self):
         is_valid = True
-    
+
         tree = self.tree_trunk
         branch = tree.GetSelection()
         info = tree.GetItemData(branch)
@@ -654,7 +718,7 @@ class TreeManagement(wxf.TreeManager):
                     continue
             else:
                 new_data[v[0]] = v[2]
-            
+
         if is_valid:
             if self.status & TX_EDIT:
                 action = 'update'
@@ -669,7 +733,7 @@ class TreeManagement(wxf.TreeManager):
             set_message(self, (1,), ('Error detected',), message=self.this_table.get_message(), retain=True)
         # self.main_refresh()
         return is_valid
-    
+
     def __swap(self, branch1, branch2):
         b1_info = self.tree_trunk.GetItemData(branch1)
         b1_data = b1_info['data']
@@ -685,13 +749,13 @@ class TreeManagement(wxf.TreeManager):
             self.__load_branches(branch=parent_branch, levels=levels)
         else:
             set_message(self, (1,), (f'error swapping branches',), self.this_table.get_message())
-    
+
     def __activate_table(self, activate_this):
         assert activate_this in self.base.data.keys(), f'{activate_this} is not a valid table name'
         self.this_table = self.base.data.get(activate_this, None)
         self.parent_table = self.base.data.get(ANCESTORS[activate_this][0], None)
         self.grandparent_table = self.base.data.get(ANCESTORS[activate_this][1], None)
-    
+
     def __load_branches(self, branch=None, levels=()):
         assert branch.IsOk(), f'invalid parent branch passed to reload'
         assert len(levels) and levels[0] in self.base.data.keys(), f'invalid table names {levels} passed to reload'
@@ -703,7 +767,7 @@ class TreeManagement(wxf.TreeManager):
         else:
             item_data = tree.GetItemData(branch)
             key = item_data['data']['key']
-        
+
         self.__refresh_data(levels[0], key)
         db_data = self.base.data.get(levels[0], None)
         for key, record in db_data.rows.items():
@@ -711,7 +775,7 @@ class TreeManagement(wxf.TreeManager):
                                                    data={'levels': levels, 'data': record})
             if next_levels:
                 self.__load_branches(container, next_levels)
-    
+
     def __refresh_data(self, table, parent=0):
         db_data = self.base.data.get(table, None)
         if not parent:
@@ -719,18 +783,18 @@ class TreeManagement(wxf.TreeManager):
                 db_data.process('fetch')
         else:
             db_data.process('fetch', parent=parent)
-    
+
     def __tree_accel(self):
         up_id = wx.NewId()
         down_id = wx.NewId()
         self.Bind(wx.EVT_MENU, self.on_key_up, id=up_id)
         self.Bind(wx.EVT_MENU, self.on_key_down, id=down_id)
-        
+
         self.tree_trunk.accel_tbl = wx.AcceleratorTable([(wx.ACCEL_ALT, wx.WXK_UP, up_id),
                                                          (wx.ACCEL_ALT, wx.WXK_DOWN, down_id)
                                                          ])
         self.tree_trunk.SetAcceleratorTable(self.tree_trunk.accel_tbl)
-    
+
     def on_key_up(self, event):
         if not self.status:
             self.status = TX_MOVING
@@ -743,7 +807,7 @@ class TreeManagement(wxf.TreeManager):
             self.status = TX_CLEAN
         print(f'Alt-up key press')
         event.Skip()
-    
+
     def on_key_down(self, event):
         if not self.status:
             self.status = TX_MOVING
@@ -756,7 +820,7 @@ class TreeManagement(wxf.TreeManager):
             self.status = TX_CLEAN
         print(f'Alt-down key press')
         event.Skip()
-    
+
     def on_left_double(self, event):
         print('on_edit')
         tree = self.tree_trunk
@@ -769,14 +833,14 @@ class TreeManagement(wxf.TreeManager):
         branch_info = self.tree_trunk.GetItemData(branch)
         levels = branch_info['levels']
         self.__get_changes('edit', levels[0].lower())
-    
+
     def on_changing_branch(self, event):
         print('on_changing_branch')
         if self.status & TX_CHANGED:
             event.Veto()
             set_message(self, (1,), ('Unsaved Changes',))
             main_refresh(self.base, (self.tree_panel, self))
-    
+
     def on_changed_branch(self, event):
         print('on_changed_branch')
         tree = event.GetEventObject()
@@ -798,8 +862,9 @@ class TreeManagement(wxf.TreeManager):
         self.status = TX_CLEAN
         if self.tree_panel.Shown:
             self.tree_panel.Hide()
+            self._button_refresh()
             main_refresh(self.base, (self.tree_panel, self))
-    
+
     def on_right_down(self, event):
         print('on_rdown')
         if self.status & TX_CHANGED:
@@ -824,7 +889,7 @@ class TreeManagement(wxf.TreeManager):
                 self.m_add_child.SetItemLabel(' ')
                 self.m_add_child.Enable(False)
             event.Skip()
-    
+
     # def on_menu(self, event):
     #     print('on_menu')
     #     event.Skip()
@@ -843,9 +908,9 @@ class TreeManagement(wxf.TreeManager):
         else:
             action = ['add', self.tables[0]]
         self.__get_changes(action[0], action[1])
-    
+
     def _button_refresh(self, show=('all',), enable=(), focus=()):
-        
+
         self.b_exit.Show()
         self.b_exit.Enable()
         buttons = {
@@ -867,18 +932,20 @@ class TreeManagement(wxf.TreeManager):
             else:
                 v.Hide()
                 v.Disable()
-    
+
     def on_new_button(self, event):
         branch = self.tree_trunk.GetSelection()
         branch_info = self.tree_trunk.GetItemData(branch)
         levels = branch_info.get('levels', ())
         result = 0
         if len(levels) > 1:
-            with SelectBranch(self, levels[0:1], 'Select') as dlg:
+            with SelectBranch(self, levels[0:2], 'Select') as dlg:
                 result = dlg.ShowModal()
-        
-        self.__get_changes('add', levels[result])
-    
+        if result == -1:
+            self.on_cancel_button(None)
+        else:
+            self.__get_changes('add', levels[result])
+
     def on_edit_button(self, event):
         branch = self.tree_trunk.GetSelection()
         branch_info = self.tree_trunk.GetItemData(branch)
@@ -980,7 +1047,7 @@ class GenericPanelActions:
                     break
         elif 'details' in self.this_panel.keys():
             self.set_combo('details', parent=self.lookup_lists['subcategories'][0])
-        
+
         for k, v in self.this_panel.items():
             field = getattr(self, v)
             if k in ('parent', 'grandparent'):
@@ -1005,7 +1072,7 @@ class GenericPanelActions:
                 field.SetValue(0.0)
             else:
                 field.SetValue('')
-    
+
     def update(self, **kwargs):
         min_date = START_DATE
         max_date = END_DATE
@@ -1030,7 +1097,7 @@ class GenericPanelActions:
             self.set_combo('details', parent=row['subcategory'], key=row['detail'])
         elif 'details' in self.this_panel.keys():
             self.set_combo('details', parent=row['subcategory'])
-        
+
         for k, v in self.this_panel.items():
             field = getattr(self, v)
             if k in ('parent', 'grandparent'):
@@ -1044,7 +1111,7 @@ class GenericPanelActions:
                 field.SetValue(row[k])
             else:
                 field.SetValue(row[k])
-    
+
     def apply(self, **kwargs):
         assert self.base.is_new or self.base.is_edit, f'no valid action in progress'
         is_valid = True
@@ -1055,7 +1122,7 @@ class GenericPanelActions:
             self.parent_row = self.parent_table.rows.get(self.parent_record, {})
         else:
             self.parent_record = 0
-        
+
         new_data = {}
         new_value = None
         for k, v in self.this_panel.items():
@@ -1096,9 +1163,9 @@ class GenericPanelActions:
                 self.this_table.process('fetch')
             else:
                 set_message(self, (1,), ('Error detected',), message=self.this_table.get_message())
-        
+
         return is_valid
-    
+
     def set_combo(self, field_name, table=None, child_table=None, parent=0, key=0):
         if not table:
             table = self.base.data[field_name]
@@ -1123,7 +1190,7 @@ class GenericPanelActions:
             field.Select(field.GetStrings().index(table.get_descriptions(key=key)))
         self.lookup_lists[field_name] = [combo_list.get(field.GetValue(), 0), combo_list]
         return field.GetCount()
-    
+
     def _on_lookup(self, event):
         combo = event.EventObject
         field_name = combo.Name
@@ -1184,18 +1251,18 @@ class TaxonomyPanel(wxf.TaxonomyEdit):
         self.SetSizerAndFit(self.top_sizer)
         self.Layout()
         # GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     def on_edited(self, event):
         print('on_edited')
         if self.status:
             self.status |= TX_CHANGED
             self.status ^= TX_RESET
             self.parent._button_refresh(enable=('reset', 'apply', 'cancel'))
-    
+
     def on_enter(self, event):
         print('on_enter')
         self.parent._apply()
-    
+
     """
     def _on_lookup(self, event):
         GenericPanelActions._on_lookup(self, event)
@@ -1216,10 +1283,10 @@ class SubCategories(wxf.SubCatEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     def _on_lookup(self, event):
         GenericPanelActions._on_lookup(self, event)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1237,10 +1304,10 @@ class Details(wxf.DetailEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     def _on_lookup(self, event):
         GenericPanelActions._on_lookup(self, event)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1258,7 +1325,7 @@ class Suppliers(wxf.SupplierEdit, GenericPanelActions):
     def __init__(self, parent, tab_name, base, tables, status):
         super().__init__(parent, name=tab_name)
         GenericPanelActions.__init__(self, base=base, child=self, tables=tables, status=status)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1276,7 +1343,7 @@ class Accounts(wxf.AccountEdit, GenericPanelActions):
     def __init__(self, parent, tab_name, base, tables, status):
         super().__init__(parent)
         GenericPanelActions.__init__(self, base=base, child=self, tables=tables, status=status)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1294,7 +1361,7 @@ class SubAccounts(wxf.SubAccountEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1312,7 +1379,7 @@ class Transactions(wxf.TransactionEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1330,7 +1397,7 @@ class Rules(wxf.RulesEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1348,7 +1415,7 @@ class Cards(wxf.CardEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1366,7 +1433,7 @@ class Contacts(wxf.ContactEdit, GenericPanelActions):
     def __init__(self, base, **kwargs):
         super().__init__(base)
         GenericPanelActions.__init__(self, base=base, child=self)
-    
+
     """
     def new(self, **kwargs):
         super().new(**kwargs)
@@ -1386,9 +1453,9 @@ class Summary(wxf.Summary):
         self.base = base
         self.tables = tables
         self.__summary_init()
-    
+
     def __summary_init(self):
-        
+
         account_data = self.base.data.get(self.tables[0], None)
         transaction_data = self.base.data.get(self.tables[1], None)
         if account_data.rowcount != account_data.sel_rowcount:
@@ -1408,7 +1475,7 @@ class Summary(wxf.Summary):
             self.summary_cell_values.append((wx.StaticText(self, -1, f'{k}:'), wx.EXPAND))
             self.summary_cell_values.append((wx.TextCtrl(self, value=f'{v}',
                                                          style=wx.TE_READONLY | wx.TE_RIGHT), wx.EXPAND))
-        
+
         self.summary_sizer.Clear()
         self.summary_sizer.AddMany(self.summary_cell_values)
         main_refresh(self.base, (self,))
