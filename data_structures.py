@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import pymysql.cursors
 
-from reset_taxonomy_sort import _reset_taxonomy_sort
+from reset_taxonomy_sort1 import _reset_taxonomy_sort
 # from connect_db import select_db
 from statics import *
 
@@ -82,13 +82,13 @@ def get_structure(database):
         _ALL_COLUMNS[table] = {column['Field']: {
                 **dict(column.items()),
                 **__get_py(column['Field'], column['Type'], column['Default'])
-        } for column in columns if column['Table'] == table}
+                } for column in columns if column['Table'] == table}
     global _AVAILABLE
     _AVAILABLE = True
 
 
 def __get_py(c_name, c_type, c_default) -> Dict:
-    py_values = {'py_type': Any, 'py_default': None, 'py_precision': (10,)}
+    py_values = {'py_type': Any, 'py_default': None, 'py_precision': (10,), 'py_required': 1}
     maria_types = [(['text', 'char', 'enum'], {'default': ''}, str),
                    (['int'], {'key': None, 'default': 0}, int),
                    (['float', 'decimal', 'double'], {'default': 0.00}, float),
@@ -101,6 +101,7 @@ def __get_py(c_name, c_type, c_default) -> Dict:
                 py_values['py_precision'] = tuple(map(int, re.findall(r'[0-9]+', c_type)))
             if c_default is None:
                 py_values['py_default'] = db_type[1].get(c_name, db_type[1]['default'])
+                py_values['py_required'] = 1
             else:
                 if db_type[2] is str:
                     py_values['py_default'] = c_default.strip(' \'"')
@@ -108,6 +109,7 @@ def __get_py(c_name, c_type, c_default) -> Dict:
                     py_values['py_default'] = datetime.fromisoformat(c_default.strip(' \'"'))
                 else:
                     py_values['py_default'] = c_default
+                py_values['py_required'] = 0
             break
     return py_values
 
@@ -188,15 +190,14 @@ class DataTables:
     
     def get_filter(self):
         return self._sql_filter
-    
-    def get_descriptions(self, key=0, parent=0):
+
+    def get_descriptions(self, key=0):
         if key:
-            return self.rows.get(key, {}).get('name', '')
-        elif parent:
-            return [v['name'] for v in self.rows.values() if
-                    v['parent'] == parent]
+            return self.rows.get(key, {}).get('name', 'description not found')
         else:
-            return [v['name'] for v in self.rows.values()]
+            description_list = ['description not found']
+            description_list += [v['name'] for v in self.rows.values()]
+            return description_list
 
     def is_active(self, ref, when: datetime = datetime.today()):
         row = dict(self.rows[ref])
@@ -209,7 +210,8 @@ class DataTables:
     def __initial(self):
         self._exists = True
         self._columns = _ALL_COLUMNS[self.table_name]
-        self.columns = [(k, v['py_type'], v['py_default'], v['Comment']) for k, v in self._columns.items()]
+        self.columns = [(k, v['py_type'], v['py_default'], v['Comment'], v['py_required'])
+                        for k, v in self._columns.items()]
         self.colcount = len(self.columns)
         self.__key_list()
         self.__fetch()
@@ -252,7 +254,7 @@ class DataTables:
         if is_valid := self._validate('insert', **kwargs):
             if is_valid := self._insert_sql(**kwargs):
                 if is_valid := self._execute_sql('insert'):
-                    self.__fetch_rebuild()
+                    self.__fetch()
                     if 'parent' in kwargs.keys():
                         is_valid = self.__fetch(name=kwargs['name'], parent=kwargs.get('parent'))
                     else:
@@ -264,11 +266,10 @@ class DataTables:
         return is_valid
     
     def __instance_update(self, **kwargs):
-        key = kwargs.get('key', 0)
         if is_valid := self._validate(action='update', **kwargs):
             if is_valid := self._update_sql(**kwargs):
                 if is_valid := self._execute_sql('update'):
-                    self.__fetch_rebuild()
+                    self.__fetch()
         return is_valid
 
     def __instance_swap(self, parent, *args):
@@ -293,7 +294,7 @@ class DataTables:
             self._sql_statements = sql
             if is_valid := self._execute_sql('update'):
                 if is_valid := _reset_taxonomy_sort(self.database):
-                    self.__fetch_rebuild()
+                    self.__fetch()
         return is_valid
 
     def _validate(self, action='', **kwargs):
@@ -345,8 +346,7 @@ class DataTables:
     def _validate_insert(self, **kwargs):
         is_valid = True
         missing_parm = [k for k, v in self._columns.items()
-                        if (k not in kwargs.keys() and v['Default'] is None and k != f'key')
-                        or k == 'name' and not kwargs.get(k, None)]
+                        if (k not in kwargs.keys() and v['py_required'] and k != f'key')]
         if missing_parm:
             self._error_msg += f'\nmissing parameters: {missing_parm}'
             is_valid = False
@@ -450,14 +450,14 @@ class DataTables:
             self._sql_statements.append([fetch_statement, (fetch_args,)])
     
             for child_name in DESCENDANTS[self.table_name]:
-                is_valid = self._cascade_sql(child_name, **kwargs)
+                is_valid = self._cascade_sql(child_name, parent=key, **kwargs)
         else:
             is_valid = False
             self._error_msg += f'\nno changes found to action on table {self.table_name}'
         
         return is_valid
-    
-    def _cascade_sql(self, child_name, **kwargs) -> bool:
+
+    def _cascade_sql(self, child_name, parent=0, grandparent=0, **kwargs) -> bool:
         is_valid = True
         cascade_args = {}
         for k, v in ({k1: v1 for k1, v1 in kwargs.items()
@@ -473,21 +473,23 @@ class DataTables:
     
         update_fields = ''
         update_args = []
-        update_condition = ''
-        condition_args = []
         if cascade_args:
+            update_condition = ' WHERE '
             if cascade_args.get('grandparent', 0):
-                update_condition = f"WHERE `grandparent` = %s AND `parent` = %s "
+                update_condition += f" `grandparent` = %s AND `parent` = %s "
                 condition_args = [(cascade_args.get('grandparent', 0), cascade_args.get('parent', 0),)]
             elif cascade_args.get('parent', 0):
-                update_condition = f"WHERE `parent` = %s "
+                update_condition += f" `parent` = %s "
                 condition_args = [(cascade_args.get('parent', 0),)]
+            elif parent:
+                update_condition += f" `parent` = %s "
+                condition_args = [(parent,)]
             else:
-                is_valid = False
-                self._error_msg += f'\nerror synchronising  with {child_name} table'
+                update_condition += f" `grandparent` = %s "
+                condition_args = [(grandparent,)]
             if is_valid:
                 conditions = {'start_date': '<', 'end_date': '>'}
-                brackets = {1: ' AND (', 2: ' OR ', 3: ') '}
+                brackets = {1: ' (', 2: ' OR ', 3: ') '}
                 date_cnt = 0
                 value_cnt = 0
                 for k, v in cascade_args.items():
@@ -499,6 +501,8 @@ class DataTables:
                             new_date = (f"{v.strftime('%Y-%m-%d')}",)
                         update_fields += f"`{k}`=%s, "
                         update_args += (f"{new_date}",)
+                        if date_cnt == 1 and update_condition != ' WHERE ':
+                            update_condition += ' AND '
                         update_condition += f" {brackets[date_cnt]} `{k}` {conditions[k]} %s"
                         condition_args += (f"{new_date}",)
                     elif k == 'parent':
@@ -525,7 +529,7 @@ class DataTables:
                     self._sql_statements.append([update_statement, update_args])
                     self._sql_statements.append([fetch_statement, (fetch_args,)])
                     for grandchild_name in DESCENDANTS[child_name]:
-                        is_valid = self._cascade_sql(grandchild_name, **cascade_args)
+                        is_valid = self._cascade_sql(grandchild_name, grandparent, **cascade_args)
             else:
                 is_valid = False
                 self._error_msg += f'\nno changes found to action on table {self.table_name}'
