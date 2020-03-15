@@ -1737,12 +1737,6 @@ class GridManager(wx.Panel):
         
         self.panel_sizer = wx.BoxSizer(wx.VERTICAL)
         
-        self.grid_panel = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,
-                                   wx.BORDER_SIMPLE | wx.TAB_TRAVERSAL)
-        self.grid_panel.SetBackgroundColour(wx.Colour(244, 255, 255))
-        
-        self.panel_sizer.Add(self.grid_panel, 0, wx.ALL | wx.EXPAND, 5)
-        
         self.top_sizer.Add(self.panel_sizer, 0, wx.EXPAND, 5)
         
         self.grid_buttons = wx.Panel(self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize,

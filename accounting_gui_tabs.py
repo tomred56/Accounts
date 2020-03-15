@@ -1,3 +1,5 @@
+import csv
+
 import wx
 import wx.adv
 import wx.grid
@@ -149,6 +151,7 @@ class BaseWindow(wxf.MainFrame):
             self.status['connect'] = self.connect()
         if self.status['connect'] == CX_CONNECTED:
             self.__notebook_init()
+            self.Bind(wx.EVT_BUTTON, self.on_exit_button)
             set_message(self, (2,), ('CONNECTED',), message='')
             main_refresh(self)
         else:
@@ -331,8 +334,14 @@ class BaseWindow(wxf.MainFrame):
         self.main_sizer.Show(self.single, True, True)
         main_refresh(self)
     '''
-    
+
     def closedown(self):
+        for page in self.all_tabs.values():
+            try:
+                page.tree_trunk.Unbind(wx.EVT_TREE_SEL_CHANGED)
+                page.tree_trunk.Unbind(wx.EVT_TREE_SEL_CHANGING)
+            except Exception as e:
+                pass
         try:
             self.db_details['db'].close()
         except Exception as e:
@@ -351,27 +360,20 @@ class BaseWindow(wxf.MainFrame):
     #     self.Centre()
     #     self.Show()
     #     self.Raise()
-    
+
     def on_key_pressed_somewhere(self, e):
         print(f'a key pressed {e}')
         e.Skip()
-    
+
     #    def on_date(self, e):
     #        if self.calendar.visible:
     #            self.calendar.Hide()
     #        else:
     #            self.calendar.Show()
-    
-    # def on_exit_button(self, event):
-    #     try:
-    #         self.database.close()
-    #     except (AttributeError) as e:
-    #         pass
-    #     try:
-    #         self.Close()
-    #     except (RuntimeError) as e:
-    #         pass
-    
+
+    def on_exit_button(self, event):
+        self.closedown()
+
     def on_status_dclick(self, event):
         place = self.status_bar.GetFieldRect(2)
         if event.GetX() >= place.GetLeft() and event.GetX() <= place.GetRight():
@@ -598,25 +600,27 @@ class TreeManagement(wxf.TreeManager):
         self.child_branch_level = None
         self.child_branch_data = None
         if self.tab_name == 'taxonomy':
-            self.tree_panel.AddChild(TaxonomyPanel(self, self.tab_name, self.tables))
-            self.panel = self.tree_panel.GetChildren()[0]
-            sizer = self.tree_panel.GetContainingSizer()
-            sizer.Add(self.panel)
-        elif self.tab_name == 'suppliers':
-            self.tree_panel.AddChild(Suppliers(self, self.tab_name, self.tables))
-            self.panel = self.tree_panel.GetChildren()[0]
-            sizer = self.tree_panel.GetContainingSizer()
-            sizer.Add(self.panel)
-        elif self.tab_name == 'accounts':
-            self.tree_panel.AddChild(Accounts(self, self.tab_name, self.tables))
-            self.panel = self.tree_panel.GetChildren()[0]
-            sizer = self.tree_panel.GetContainingSizer()
-            sizer.Add(self.panel)
-        elif self.tab_name == 'transactions':
-            self.tree_panel.AddChild(Transactions(self, self.tab_name, self.tables))
-            self.panel = self.tree_panel.GetChildren()[0]
-            sizer = self.tree_panel.GetContainingSizer()
-            sizer.Add(self.panel)
+            self.panel = TaxonomyPanel(self, self.tab_name, self.tables)
+            self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+        #     self.tree_panel.AddChild(TaxonomyPanel(self, self.tab_name, self.tables))
+        #     self.panel = self.tree_panel.GetChildren()[0]
+        #     sizer = self.tree_panel.GetContainingSizer()
+        #     sizer.Add(self.panel)
+        # elif self.tab_name == 'suppliers':
+        #     self.tree_panel.AddChild(Suppliers(self, self.tab_name, self.tables))
+        #     self.panel = self.tree_panel.GetChildren()[0]
+        #     sizer = self.tree_panel.GetContainingSizer()
+        #     sizer.Add(self.panel)
+        # elif self.tab_name == 'accounts':
+        #     self.tree_panel.AddChild(Accounts(self, self.tab_name, self.tables))
+        #     self.panel = self.tree_panel.GetChildren()[0]
+        #     sizer = self.tree_panel.GetContainingSizer()
+        #     sizer.Add(self.panel)
+        # elif self.tab_name == 'transactions':
+        #     self.tree_panel.AddChild(Transactions(self, self.tab_name, self.tables))
+        #     self.panel = self.tree_panel.GetChildren()[0]
+        #     sizer = self.tree_panel.GetContainingSizer()
+        #     sizer.Add(self.panel)
         else:
             self.panel = None
         # self.top_sizer.Remove(1)
@@ -1095,7 +1099,7 @@ class TreeManagement(wxf.TreeManager):
         self.status[self.tab_name] = TX_CLEAN
         # self.Layout()
         main_refresh(self)
-    
+
     def on_exit_button(self, event):
         if self.status[self.tab_name] & TX_CHANGED and not self.status[self.tab_name] & TX_RESET:
             set_message(self, (1,), ('Unsaved changes',),
@@ -1105,9 +1109,7 @@ class TreeManagement(wxf.TreeManager):
         else:
             self.status[self.tab_name] = TX_CLEAN
             self.is_tab_dirty = False
-            self.tree_trunk.Unbind(wx.EVT_TREE_SEL_CHANGED)
-            self.tree_trunk.Unbind(wx.EVT_TREE_SEL_CHANGING)
-            self.base.closedown()
+            event.Skip()
 
 
 class GridManagement(wxf.GridManager):
@@ -1126,20 +1128,26 @@ class GridManagement(wxf.GridManager):
         self.parent_filter = []
         self.grandparent_filter = []
         if self.tab_name == 'suppliers':
-            self.grid_panel.AddChild(Suppliers(self, self.tab_name, self.tables))
-            self.panel = self.grid_panel.GetChildren()[0]
-            sizer = self.grid_panel.GetContainingSizer()
-            sizer.Add(self.panel)
+            self.panel = Suppliers(self, self.tab_name, self.tables)
+            self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            # self.panel_sizer.Add(Suppliers(self, self.tab_name, self.tables), 1, wx.ALL, 5)
+            # self.panel = self.panel_sizer.GetChildren()[0]
+            # sizer = self.grid_panel.GetContainingSizer()
+            # sizer.Add(self.panel)
         elif self.tab_name == 'accounts':
-            self.grid_panel.AddChild(Accounts(self, self.tab_name, self.tables))
-            self.panel = self.grid_panel.GetChildren()[0]
-            sizer = self.grid_panel.GetContainingSizer()
-            sizer.Add(self.panel)
+            self.panel = Accounts(self, self.tab_name, self.tables)
+            self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            # self.panel_sizer.Add(Accounts(self, self.tab_name, self.tables))
+            # self.panel = self.panel_sizer.GetChildren()[0]
+            # sizer = self.grid_panel.GetContainingSizer()
+            # sizer.Add(self.panel)
         elif self.tab_name in ('transactions', 'transactions_new'):
-            self.grid_panel.AddChild(Transactions(self, self.tab_name, self.tables))
-            self.panel = self.grid_panel.GetChildren()[0]
-            sizer = self.grid_panel.GetContainingSizer()
-            sizer.Add(self.panel)
+            self.panel = Transactions(self, self.tab_name, self.tables)
+            self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            # self.panel_sizer.Add(Transactions(self, self.tab_name, self.tables))
+            # self.panel = self.panel_sizer.GetChildren()[0]
+            # sizer = self.grid_panel.GetContainingSizer()
+            # sizer.Add(self.panel)
         else:
             self.panel = None
         # self.top_sizer.Remove(1)
@@ -1161,8 +1169,8 @@ class GridManagement(wxf.GridManager):
         self.rows.Add(self.grid_sizer, 1, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 5, None)
     
     def __rows_load(self, my_parent=0, my_grandparent=0):
-        
-        panel = self.grid_panel
+    
+        panel = self.panel
         if self.grid_sizer.GetNumberRows():
             self.grid_sizer.DeleteRows(0, self.grid_sizer.GetNumberRows())
         if self.grid_sizer.GetNumberCols():
@@ -1438,13 +1446,13 @@ class GridManagement(wxf.GridManager):
             self.panel.this_record = int(self.grid_sizer.GetRowLabelValue(self.panel.this_row))
         e.Skip()
     
-    def on_changing_branch(self, event):
-        print(f'on_changing_branch ')
-        if self.status[self.tab_name] & TX_CHANGED:
-            event.Veto()
-            set_message(self, (1,), ('Unsaved Changes',))
-            main_refresh(self)
-    
+    # def on_changing_branch(self, event):
+    #     print(f'on_changing_branch ')
+    #     if self.status[self.tab_name] & TX_CHANGED:
+    #         event.Veto()
+    #         set_message(self, (1,), ('Unsaved Changes',))
+    #         main_refresh(self)
+    #
     def on_changed_branch(self, event):
         print('on_changed_branch')
         tree = event.GetEventObject()
@@ -1539,13 +1547,15 @@ class GridManagement(wxf.GridManager):
                 v.Disable()
     
     def on_import_button(self, event):
-        with SelectCSV(self) as dlg:
-            result = dlg.ShowModal()
-        import csv
-        with open(self.import_file, newline='') as csv_file:
-            reader = csv.reader(csv_file)
-            for row in reader:
-                print(f'{row}')
+        home = wx.GetHomeDir()
+        if import_file := wx.FileSelector('select csv file to import',
+                                          f'{home}\\OneDrive', wildcard='*.csv'):
+            # with SelectCSV(self) as dlg:
+            #     result = dlg.ShowModal()
+            with open(import_file, newline='') as csv_file:
+                reader = csv.reader(csv_file)
+                for row in reader:
+                    print(f'{row}')
     
     def on_new_button(self, event):
         # branch = self.tree_trunk.GetSelection()
@@ -1593,7 +1603,7 @@ class GridManagement(wxf.GridManager):
             main_refresh(self)
         else:
             self.status[self.tab_name] = TX_CLEAN
-            self.base.closedown()
+            event.Skip()
 
 
 class GenericPanelActions:
