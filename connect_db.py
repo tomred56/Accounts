@@ -1,6 +1,4 @@
-import pymysql
 import pymysql.cursors
-
 
 def select_db(host='', use_db='', user='', password=''):
     message = 'connection successful'

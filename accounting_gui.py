@@ -102,8 +102,8 @@ class BaseWindow(wxf.MainFrame):
         a_data = self.data['accounts']
         t_data = self.data['transactions']
         values = {}
-        if a_data.process('fetch'):
-            if t_data.process('fetch'):
+        if a_data.process_db('fetch'):
+            if t_data.process_db('fetch'):
                 values['Income'] = sum(v['amount'] for v in t_data.records.values() if v['amount'] > 0)
                 values['Expenditure'] = sum(v['amount'] for v in t_data.records.values() if v['amount'] < 0)
                 values['Balance'] = sum(v['amount'] for v in t_data.records.values())
@@ -152,10 +152,10 @@ class BaseWindow(wxf.MainFrame):
                 self.rows_sizer.SetColFormatFloat(i - 1, 10, 2)
 
         if my_parent and (len(filter) != 1 or filter.get('parent', 0) != my_parent):
-            self.this_table.process('fetch', parent=my_parent)
+            self.this_table.process_db('fetch', parent=my_parent)
         else:
             if self.this_table.rowcount != len(self.this_table.rows):
-                self.this_table.process('fetch')
+                self.this_table.process_db('fetch')
         self.rows_sizer.InsertRows(0, self.this_table.sel_rowcount)
         rows = self.this_table.rows
         row = 0
@@ -495,9 +495,9 @@ class GenericPanelActions:
             else:
                 new_data['key'] = self.this_record
                 action = 'update'
-            if is_valid := self.this_table.process(action, **new_data):
+            if is_valid := self.this_table.process_db(action, **new_data):
                 self.base.set_message(f'Successful {action}', message='')
-                self.this_table.process('fetch')
+                self.this_table.process_db('fetch')
             else:
                 self.base.set_message('Error detected', message=self.this_table.get_message())
         
@@ -509,7 +509,7 @@ class GenericPanelActions:
         if table.rowcount != len(table.rows):
             table.process('fetch')
         if child_table and child_table.rowcount != len(child_table.rows):
-            child_table.process('fetch')
+            child_table.process_db('fetch')
         combo_list = {}
         for test_key, row in (
         d := {k: v for k, v in table.rows.items() if not parent or parent == v['parent']}).items():

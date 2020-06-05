@@ -10,6 +10,7 @@ import wxf_dialog
 # from datetime import datetime
 import wxf_tab_forms as wxf
 from statics import *
+from db_signin import *
 
 expand_option = dict(flag=wx.EXPAND)
 no_options = dict()
@@ -25,19 +26,6 @@ LOOKUPS: dict = {
 
 ANCESTORS = db.ANCESTORS
 DESCENDANTS = db.DESCENDANTS
-CX_DISCONNECTED = 0
-CX_CONNECTED = 1
-CX_FAILED = 2
-TX_CLEAN = 0
-TX_EDIT = 1
-TX_ADD_PEER = 2
-TX_ADD_CHILD = 4
-TX_CHANGED = 8
-TX_MOVING = 16
-TX_EMPTY = 32
-TX_UNUSED3 = 64
-TX_UNUSED4 = 128
-TX_RESET = 256
 
 
 def db_setup():
@@ -118,6 +106,49 @@ def main_refresh(self, focus=None):
         focus.SetFocus()
 
 
+def _button_refresh(self, refresh=0, default=0, show=('all',), enable=(), focus=()):
+    base = self.GetTopLevelParent()
+    all_buttons = {
+            'refresh': base.b_refresh,
+            'import': base.b_import,
+            'new': base.b_new,
+            'edit': base.b_edit,
+            'reset': base.b_reset,
+            'apply': base.b_apply,
+            'cancel': base.b_cancel,
+            'exit': base.b_exit
+            }
+    
+    if refresh:
+        show = self.button_settings[0]
+        enable = self.button_settings[1]
+        focus = self.button_settings[2]
+    elif default:
+        show = self.button_defaults[0]
+        enable = self.button_defaults[1]
+        focus = self.button_defaults[2]
+
+    for k, v in all_buttons.items():
+        if k == 'exit':
+            v.Show()
+            v.Enable()
+        elif k in self.buttons and (k in show or 'all' in show):
+            v.Show()
+            if k in enable:
+                v.Enable()
+                if k in focus:
+                    v.SetFocus()
+            else:
+                v.Disable()
+        else:
+            v.Hide()
+            v.Disable()
+            
+    self.button_settings[0] = show
+    self.button_settings[1] = enable
+    self.button_settings[2] = focus
+
+
 def _activate_table(self, activate_this):
     assert activate_this in self.base.db_tables.keys(), f'{activate_this} is not a valid table name'
     base = self.GetTopLevelParent()
@@ -147,6 +178,7 @@ class BaseWindow(wxf.MainFrame):
         self.status = {'summary': TX_CLEAN, 'suppliers': TX_CLEAN, 'accounts': TX_CLEAN, 'transactions': TX_CLEAN,
                        'taxonomy': TX_CLEAN,
                        'connect': CX_DISCONNECTED}
+
         while self.status['connect'] == CX_DISCONNECTED:
             self.status['connect'] = self.connect()
         if self.status['connect'] == CX_CONNECTED:
@@ -205,11 +237,14 @@ class BaseWindow(wxf.MainFrame):
         self.this_page_name = self.this_page.Name.lower()
         self.set_refresh(self.this_page_name, self.this_page)
         print(self.this_page_name)
+        _button_refresh(self.this_page, refresh=1)
         main_refresh(self)
     
     def set_refresh(self, page_name, page):
         if page_name == 'taxonomy':
             page.tree_trunk.Layout()
+        else:
+            page._rows_refresh()
             # page.tree.Layout()
             # page.tree.SetSizerAndFit(page.tree_sizer)
         page.Layout()
@@ -371,6 +406,27 @@ class BaseWindow(wxf.MainFrame):
     #        else:
     #            self.calendar.Show()
 
+    def on_refresh_button(self, event):
+        self.this_page.on_refresh_button(event)
+
+    def on_import_button(self, event):
+        self.this_page.on_import_button(event)
+
+    def on_new_button(self, event):
+        self.this_page.on_new_button(event)
+
+    def on_edit_button(self, event):
+        self.this_page.on_edit_button(event)
+
+    def on_reset_button(self, event):
+        self.this_page.on_reset_button(event)
+
+    def on_apply_button(self, event):
+        self.this_page.on_apply_button(event)
+
+    def on_cancel_button(self, event):
+        self.this_page.on_cancel_button(event)
+
     def on_exit_button(self, event):
         self.closedown()
 
@@ -417,7 +473,7 @@ class SelectBranch(wx.Dialog):
     def on_cancel(self, event):
         self.EndModal(-1)
 
-
+'''
 class SelectCSV(wxf_dialog.select_file):
     
     def __init__(self, parent):
@@ -504,16 +560,15 @@ class SignInDialog(wxf_dialog.db_sign_in):
                 self.db_details['name'] = self.use_db.GetValue()
                 self.db_details['user'] = self.user_name.GetValue()
                 db.get_structure(database)
-                incr = 99 // (len(db._T_STRUCTURE) + 1)
-                self.progress.SetRange(100)
+                self.progress.SetRange(len(db._T_STRUCTURE))
                 self.progress.SetValue(0)
                 self.progress.Show()
                 self.Layout()
                 # self.SetSizerAndFit(self.top_sizer)
                 for table in db._T_STRUCTURE.keys():
                     self.db_tables[table] = db.DataTables(database, table)
-                    self.db_tables[table].process()
-                    self.progress.SetValue(self.progress.GetValue() + incr)
+                    # self.db_tables[table].process()
+                    self.progress.SetValue(self.progress.GetValue() + 1)
                 self.progress.Hide()
                 self.status = CX_CONNECTED
                 self.close_dialog()
@@ -575,7 +630,7 @@ class SignInDialog(wxf_dialog.db_sign_in):
             self.EndModal(CX_FAILED)
         else:
             self.EndModal(self.status)
-
+'''
 
 class TreeManagement(wxf.TreeManager):
     
@@ -602,6 +657,9 @@ class TreeManagement(wxf.TreeManager):
         if self.tab_name == 'taxonomy':
             self.panel = TaxonomyPanel(self, self.tab_name, self.tables)
             self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            self.buttons = ['new', 'edit', 'reset', 'apply', 'cancel']
+            self.button_settings = [('all',), ('new', 'edit'), ()]
+            self.button_defaults = [('all',), ('new', 'edit'), ()]
         #     self.tree_panel.AddChild(TaxonomyPanel(self, self.tab_name, self.tables))
         #     self.panel = self.tree_panel.GetChildren()[0]
         #     sizer = self.tree_panel.GetContainingSizer()
@@ -641,13 +699,13 @@ class TreeManagement(wxf.TreeManager):
                 tree.SetFocusedItem(first_item[0])
                 self.status[self.tab_name] = TX_CLEAN
                 panel.Hide()
-                self._button_refresh(enable=('new', 'edit'))
+                _button_refresh(self, enable=('new', 'edit'))
             else:
                 self.status[self.tab_name] = TX_EMPTY
                 self.branch_level = self.tables[0]
                 self.__get_changes('add', self.tables[0])
                 panel.Show()
-                self._button_refresh(enable=('cancel',))
+                _button_refresh(self, enable=('cancel',))
         self.__tree_accel()
         return tree.GetSelection()
 
@@ -672,7 +730,7 @@ class TreeManagement(wxf.TreeManager):
             #                               new_data['name'],
             #                               data={'levels': levels, 'data': new_data})
             self.status[self.tab_name] = TX_ADD_PEER
-            self._button_refresh(enable=('cancel',))
+            _button_refresh(self, enable=('cancel',))
             tree.SelectItem(self.branch)
             tree.SetFocusedItem(self.branch)
             self.__get_changes('add', levels[0])
@@ -685,7 +743,7 @@ class TreeManagement(wxf.TreeManager):
             tree.SelectItem(branch)
             tree.SetFocusedItem(branch)
             self.status[self.tab_name] = TX_CLEAN
-            self._button_refresh(enable=('new', 'edit'))
+            _button_refresh(self, enable=('new', 'edit'))
             panel.new_values()
             panel.Hide()
         elif self.status[self.tab_name] & TX_ADD_PEER:
@@ -695,7 +753,7 @@ class TreeManagement(wxf.TreeManager):
                                           new_data['name'],
                                           data={'levels': levels, 'data': new_data})
             self.status[self.tab_name] = TX_ADD_PEER
-            self._button_refresh(enable=('cancel',))
+            _button_refresh(self, enable=('cancel',))
             tree.SelectItem(self.branch)
             tree.SetFocusedItem(self.branch)
             self.__get_changes('add', levels[0])
@@ -709,7 +767,7 @@ class TreeManagement(wxf.TreeManager):
                                                         'data': self.child_branch_data
                                                         })
             self.status[self.tab_name] = TX_ADD_PEER
-            self._button_refresh(enable=('cancel',))
+            _button_refresh(self, enable=('cancel',))
             tree.SelectItem(self.child_branch)
             tree.SetFocusedItem(self.branch)
             self.__get_changes('add', levels[1])
@@ -755,7 +813,7 @@ class TreeManagement(wxf.TreeManager):
     
         panel.p_start_date.SetRange(min_date, max_date)
         panel.p_end_date.SetRange(min_date, max_date)
-        self._button_refresh(enable=('cancel',))
+        _button_refresh(self, enable=('cancel',))
         if self.status[self.tab_name] & TX_ADD_CHILD and self.branch != self._root:
             parent = f" in {branch_data['name']}"
         elif parent_data:
@@ -764,6 +822,7 @@ class TreeManagement(wxf.TreeManager):
         panel.Layout()
         panel.Show()
         panel.p_name.SetFocus()
+        set_message(self, (1,), (f'{action} record',), message='')
         self.Layout()
         self.SetSizerAndFit(self.top_sizer)
         main_refresh(self)
@@ -775,8 +834,10 @@ class TreeManagement(wxf.TreeManager):
         if branch := tree.GetSelection():
             info = tree.GetItemData(branch)
             data = info['data']
+            table_name = info['level'][0]
         else:
             data = {}
+            table_name = ''
         panel = self.panel
         if self.status[self.tab_name] & TX_ADD_CHILD:
             table = self.db_tables.get(self.child_branch_level)
@@ -784,7 +845,6 @@ class TreeManagement(wxf.TreeManager):
             table = self.db_tables.get(self.branch_level)
         fields_in_panel = {v[0]: f'p_{v[0]}' for v in table.columns
                            if hasattr(panel, f'p_{v[0]}')}
-        these_dates = {}
         if self.status[self.tab_name] & TX_EDIT:
             row = data
         else:
@@ -819,10 +879,7 @@ class TreeManagement(wxf.TreeManager):
                 if self.status[self.tab_name] & TX_EDIT:
                     new_data['key'] = data['key']
                 continue
-            else:
-                new_data[v[0]] = v[2]
-            
-            if v[0] == 'sort':
+            elif v[0] == 'sort':
                 if self.status[self.tab_name] & TX_ADD_CHILD:
                     children = tree.GetChildrenCount(branch, False)
                     new_data['sort'] = (data['sort'] * 1000) + children + 1
@@ -830,7 +887,10 @@ class TreeManagement(wxf.TreeManager):
                     new_data['sort'] = data.get('sort', 0) + 1
                 else:
                     continue
-            elif v[0] == 'parent':
+            else:
+                new_data[v[0]] = v[2]
+            
+            if v[0] == 'parent':
                 if self.status[self.tab_name] & TX_ADD_CHILD:
                     new_data['parent'] = data['key']
                 elif self.status[self.tab_name] & TX_ADD_PEER:
@@ -852,11 +912,16 @@ class TreeManagement(wxf.TreeManager):
                 action = 'update'
             else:
                 action = 'insert'
-            if is_valid := self.this_table.process(action, **new_data):
+            if is_valid := self.this_table.process_db(action, **new_data):
+                if action == 'update':
+                    for table in DESCENDANTS.get(table_name, ()):
+                        self.db_tables[table].tab_changed = True
                 self.__redraw()
                 set_message(self, (1,), (f'Successful {action}',), message='')
-                self.this_table.process('fetch')
+                self.this_table.process_db('fetch')
                 self.status[self.tab_name] = TX_CLEAN
+                self.panel.Hide()
+                _button_refresh(self, enable=('new', 'edit'))
         if not is_valid:
             set_message(self, (1,), ('Error detected',), message=self.this_table.get_message(), retain=True)
         main_refresh(self)
@@ -872,7 +937,7 @@ class TreeManagement(wxf.TreeManager):
         new_data1 = {'key': b1_data['key'], 'sort': b2_data['sort']}
         new_data2 = {'key': b2_data['key'], 'sort': b1_data['sort']}
         self.this_table, self.parent_table, self.grandparent_table = _activate_table(self, levels[0])
-        if self.this_table.process('swap', parent, new_data1, new_data2):
+        if self.this_table.process_db('swap', parent, new_data1, new_data2):
             parent_branch = self.tree_trunk.GetItemParent(branch1)
             self.__load_branches(branch=parent_branch, levels=levels)
         else:
@@ -903,10 +968,10 @@ class TreeManagement(wxf.TreeManager):
     def __refresh_data(self, table, parent=0):
         db_data = self.base.db_tables.get(table, None)
         if not parent:
-            if db_data.rowcount != db_data.sel_rowcount:
-                db_data.process('fetch')
+            if db_data.rowcount != db_data.sel_rowcount or db_data.tab_changed:
+                db_data.process_db('fetch')
         else:
-            db_data.process('fetch', parent=parent)
+            db_data.process_db('fetch', parent=parent)
 
     def __tree_accel(self):
         up_id = wx.NewId()
@@ -986,7 +1051,7 @@ class TreeManagement(wxf.TreeManager):
         self.status[self.tab_name] = TX_CLEAN
         if self.tree_panel.IsShown():
             self.tree_panel.Hide()
-            self._button_refresh()
+            _button_refresh(self, )
             main_refresh(self)
 
     def on_right_down(self, event):
@@ -1034,30 +1099,6 @@ class TreeManagement(wxf.TreeManager):
             action = ['add', self.tables[0]]
         self.__get_changes(action[0], action[1])
 
-    def _button_refresh(self, show=('all',), enable=(), focus=()):
-
-        self.b_exit.Show()
-        self.b_exit.Enable()
-        buttons = {
-                'new': self.b_new,
-                'edit': self.b_edit,
-                'reset': self.b_reset,
-                'apply': self.b_apply,
-                'cancel': self.b_cancel
-        }
-        for k, v in buttons.items():
-            if k in show or 'all' in show:
-                v.Show()
-                if k in enable:
-                    v.Enable()
-                    if k in focus:
-                        v.SetFocus()
-                else:
-                    v.Disable()
-            else:
-                v.Hide()
-                v.Disable()
-
     def on_new_button(self, event):
         branch = self.tree_trunk.GetSelection()
         branch_info = self.tree_trunk.GetItemData(branch)
@@ -1095,7 +1136,7 @@ class TreeManagement(wxf.TreeManager):
         self.tree_trunk.SetFocusedItem(current)
         set_message(self, (1,), message='')
         self.panel.Hide()
-        self._button_refresh(enable=('new', 'edit'))
+        _button_refresh(self, enable=('new', 'edit'))
         self.status[self.tab_name] = TX_CLEAN
         # self.Layout()
         main_refresh(self)
@@ -1130,6 +1171,9 @@ class GridManagement(wxf.GridManager):
         if self.tab_name == 'suppliers':
             self.panel = Suppliers(self, self.tab_name, self.tables)
             self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            self.buttons = ['new', 'edit', 'reset', 'apply', 'cancel']
+            self.button_settings = [('all',), ('new', 'edit'), ()]
+            self.button_defaults = [('all',), ('new', 'edit'), ()]
             # self.panel_sizer.Add(Suppliers(self, self.tab_name, self.tables), 1, wx.ALL, 5)
             # self.panel = self.panel_sizer.GetChildren()[0]
             # sizer = self.grid_panel.GetContainingSizer()
@@ -1137,6 +1181,9 @@ class GridManagement(wxf.GridManager):
         elif self.tab_name == 'accounts':
             self.panel = Accounts(self, self.tab_name, self.tables)
             self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            self.buttons = ['new', 'edit', 'reset', 'apply', 'cancel']
+            self.button_settings = [('all',), ('new', 'edit'), ()]
+            self.button_defaults = [('all',), ('new', 'edit'), ()]
             # self.panel_sizer.Add(Accounts(self, self.tab_name, self.tables))
             # self.panel = self.panel_sizer.GetChildren()[0]
             # sizer = self.grid_panel.GetContainingSizer()
@@ -1144,6 +1191,15 @@ class GridManagement(wxf.GridManager):
         elif self.tab_name in ('transactions', 'transactions_new'):
             self.panel = Transactions(self, self.tab_name, self.tables)
             self.panel_sizer.Add(self.panel, 1, wx.ALL, 5)
+            if self.tab_name =='transactions':
+                self.buttons = ['import', 'new', 'edit', 'reset', 'apply', 'cancel']
+                self.button_settings = [('all',), ('import', 'new', 'edit'), ()]
+                self.button_defaults = [('all',), ('import', 'new', 'edit'), ()]
+            else:
+                self.buttons = ['edit', 'reset', 'apply', 'cancel']
+                self.button_settings = [('all',), ('edit',), ()]
+                self.button_defaults = [('all',), ('edit',), ()]
+
             # self.panel_sizer.Add(Transactions(self, self.tab_name, self.tables))
             # self.panel = self.panel_sizer.GetChildren()[0]
             # sizer = self.grid_panel.GetContainingSizer()
@@ -1154,7 +1210,7 @@ class GridManagement(wxf.GridManager):
         # self.top_sizer.Insert(1, self.tree_panel, 0, wx.ALL | wx.EXPAND, 5)
         self.panel.Hide()
         self.__rows_init()
-        self.__rows_refresh()
+        self._rows_refresh()
         self.grid_sizer.Layout()
         self.panel_sizer.Layout()
         main_refresh(self)
@@ -1167,7 +1223,8 @@ class GridManagement(wxf.GridManager):
         self.Bind(wx.grid.EVT_GRID_RANGE_SELECT, self.on_row_selected, self.grid_sizer)
         self.Bind(wx.grid.EVT_GRID_CELL_LEFT_DCLICK, self.on_edit_button, self.grid_sizer)
         self.rows.Add(self.grid_sizer, 1, wx.EXPAND | wx.ALL | wx.ALIGN_CENTER, 5, None)
-    
+        self.__grid_accel()
+        
     def __rows_load(self, my_parent=0, my_grandparent=0):
     
         panel = self.panel
@@ -1188,12 +1245,12 @@ class GridManagement(wxf.GridManager):
                 self.grid_sizer.SetColFormatFloat(i - 1, 10, 2)
         
         if self.grandparent_filter:
-            self.this_table.process('fetch', grandparent=self.grandparent_filter)
+            self.this_table.process_db('fetch', grandparent=self.grandparent_filter)
         elif self.parent_filter:
-            self.this_table.process('fetch', parent=self.parent_filter)
+            self.this_table.process_db('fetch', parent=self.parent_filter)
         else:
-            if self.this_table.rowcount != len(self.this_table.rows):
-                self.this_table.process('fetch')
+            if self.this_table.rowcount != self.this_table.sel_rowcount or self.this_table.tab_changed:
+                self.this_table.process_db('fetch')
         self.grid_sizer.InsertRows(0, self.this_table.sel_rowcount)
         rows = self.this_table.rows
         row = 0
@@ -1215,9 +1272,9 @@ class GridManagement(wxf.GridManager):
             self.status[self.tab_name] = TX_EMPTY
             self.__get_changes('add', self.tables[0])
             panel.Show()
-            self._button_refresh(enable=('cancel',))
+            _button_refresh(self, enable=('cancel',))
     
-    def __rows_refresh(self, my_parent=0, my_grandparent=0):
+    def _rows_refresh(self, my_parent=0, my_grandparent=0):
         self.__rows_load(my_parent=0, my_grandparent=0)
         self.grid_sizer.Layout()
         self.rows.Layout()
@@ -1226,9 +1283,9 @@ class GridManagement(wxf.GridManager):
             self.grid_sizer.cursor = (0, 0)
             self.this_row = int(self.grid_sizer.GetRowLabelValue(self.grid_sizer.GetGridCursorRow()))
             self.panel.this_record = int(self.grid_sizer.GetRowLabelValue(self.this_row))
-            self._button_refresh(enable=('import', 'new', 'edit'))
+            _button_refresh(self, default=1)
         else:
-            self.b_edit.Disable()
+            _button_refresh(self, enable=('import', 'new'))
     
     def __lookup_name(self, lookup='', key=0):
         table = None
@@ -1238,8 +1295,8 @@ class GridManagement(wxf.GridManager):
             table = self.grandparent_table
         else:
             table = self.db_tables.get(LOOKUPS.get(lookup, None), None)
-        if table.rowcount != len(table.rows):
-            table.process('fetch')
+        if table.rowcount != table.sel_rowcount or table.tab_changed:
+            table.process_db('fetch')
         return dict(table.rows.get(key, {})).get('name', 'Description not found')
     
     def __get_changes(self, action, table):
@@ -1262,7 +1319,7 @@ class GridManagement(wxf.GridManager):
         
         panel.p_start_date.SetRange(min_date, max_date)
         panel.p_end_date.SetRange(min_date, max_date)
-        self._button_refresh(enable=('cancel',))
+        _button_refresh(self, enable=('cancel',))
         panel.panel_heading.SetLabel(f'{action} {table}')
         panel.Layout()
         panel.Show()
@@ -1276,6 +1333,7 @@ class GridManagement(wxf.GridManager):
         
         panel = self.panel
         table = self.this_table
+        table_name = self.tables[0]
         fields_in_panel = {v[0]: f'p_{v[0]}' for v in table.columns
                            if hasattr(panel, f'p_{v[0]}')}
         new_data = {}
@@ -1330,17 +1388,47 @@ class GridManagement(wxf.GridManager):
                 action = 'update'
             else:
                 action = 'insert'
-            if is_valid := self.this_table.process(action, **new_data):
-                self.__rows_refresh()
+            if is_valid := self.this_table.process_db(action, **new_data):
+                if action == 'update':
+                    for table in DESCENDANTS.get(table_name, ()):
+                        self.db_tables[table].tab_changed = True
+                self._rows_refresh()
                 set_message(self, (1,), (f'Successful {action}',), message='')
-                self.this_table.process('fetch')
+                # self.this_table.process_db('fetch')
                 self.status[self.tab_name] = TX_CLEAN
+                self.panel.Hide()
         if not is_valid:
             set_message(self, (1,), ('Error detected',), message=self.this_table.get_message(), retain=True)
+        
         main_refresh(self)
         return is_valid
     
-    def __swap(self, branch1, branch2):
+    def __swap(self, row1, row2):
+        grid = self.grid_sizer
+        table = self.this_table
+        old_key = int(grid.GetRowLabelValue(row1))
+        old_parent = table.rows[old_key].get('parent', 0)
+        swap_key = int(grid.GetRowLabelValue(row2))
+        swap_parent = table.rows[swap_key].get('parent', 0)
+        if old_parent == swap_parent:
+            old_sort = table.rows[old_key]['sort']
+            swap_sort = table.rows[swap_key]['sort']
+            new_data1 = {'key': old_key, 'sort': swap_sort}
+            new_data2 = {'key': swap_key, 'sort': old_sort}
+            self.this_table, self.parent_table, self.grandparent_table = _activate_table(self, self.tables[0])
+            if self.this_table.process_db('swap', None, new_data1, new_data2):
+                for table in DESCENDANTS.get(self.tables[0], ()):
+                    self.db_tables[table].tab_changed = True
+                self._rows_refresh()
+                set_message(self, (1,), (f'Successful swap',), message='')
+                # self.this_table.process_db('fetch')
+                self.status[self.tab_name] = TX_CLEAN
+            else:
+                set_message(self, (1,), (f'error swapping rows',), self.this_table.get_message())
+        else:
+            set_message(self, (1,), ('already at top/bottom within the parent group',))
+
+    def __swapb(self, branch1, branch2):
         b1_info = self.tree_trunk.GetItemData(branch1)
         b1_data = b1_info['data']
         b2_info = self.tree_trunk.GetItemData(branch2)
@@ -1350,7 +1438,7 @@ class GridManagement(wxf.GridManager):
         new_data1 = {'key': b1_data['key'], 'sort': b2_data['sort']}
         new_data2 = {'key': b2_data['key'], 'sort': b1_data['sort']}
         self.this_table, self.parent_table, self.grandparent_table = _activate_table(self, levels[0])
-        if self.this_table.process('swap', parent, new_data1, new_data2):
+        if self.this_table.process_db('swap', parent, new_data1, new_data2):
             parent_branch = self.tree_trunk.GetItemParent(branch1)
             self.__load_branches(branch=parent_branch, levels=levels)
         else:
@@ -1381,29 +1469,30 @@ class GridManagement(wxf.GridManager):
     def __refresh_data(self, table, parent=0):
         db_data = self.base.db_tables.get(table, None)
         if not parent:
-            if db_data.rowcount != db_data.sel_rowcount:
-                db_data.process('fetch')
+            if db_data.rowcount != db_data.sel_rowcount or db_data.tab_changed:
+                db_data.process_db('fetch')
         else:
-            db_data.process('fetch', parent=parent)
+            db_data.process_db('fetch', parent=parent)
     
-    def __tree_accel(self):
+    def __grid_accel(self):
         up_id = wx.NewId()
         down_id = wx.NewId()
         self.Bind(wx.EVT_MENU, self.on_key_up, id=up_id)
         self.Bind(wx.EVT_MENU, self.on_key_down, id=down_id)
         
-        self.tree_trunk.accel_tbl = wx.AcceleratorTable([(wx.ACCEL_ALT, wx.WXK_UP, up_id),
+        self.grid_sizer.accel_tbl = wx.AcceleratorTable([(wx.ACCEL_ALT, wx.WXK_UP, up_id),
                                                          (wx.ACCEL_ALT, wx.WXK_DOWN, down_id)
                                                          ])
-        self.tree_trunk.SetAcceleratorTable(self.tree_trunk.accel_tbl)
+        self.grid_sizer.SetAcceleratorTable(self.grid_sizer.accel_tbl)
     
     def on_key_up(self, event):
         if not self.status[self.tab_name]:
             self.status[self.tab_name] = TX_MOVING
-            tree = self.tree_trunk
-            new_pos = tree.GetPrevSibling(self.branch)
-            if new_pos.IsOk():
-                self.__swap(self.branch, new_pos)
+            grid = self.grid_sizer
+            cur_pos = grid.GetGridCursorRow()
+            new_pos = max(0, cur_pos - 1)
+            if new_pos < cur_pos:
+                self.__swap(cur_pos, new_pos)
             else:
                 set_message(self, (1,), ('already at top',))
             self.status[self.tab_name] = TX_CLEAN
@@ -1413,10 +1502,11 @@ class GridManagement(wxf.GridManager):
     def on_key_down(self, event):
         if not self.status[self.tab_name]:
             self.status[self.tab_name] = TX_MOVING
-            tree = self.tree_trunk
-            new_pos = tree.GetNextSibling(self.branch)
-            if new_pos.IsOk():
-                self.__swap(self.branch, new_pos)
+            grid = self.grid_sizer
+            cur_pos = grid.GetGridCursorRow()
+            new_pos = min(grid.NumberRows, cur_pos + 1)
+            if new_pos > cur_pos:
+                self.__swap(cur_pos, new_pos)
             else:
                 set_message(self, (1,), ('already at bottom',))
             self.status[self.tab_name] = TX_CLEAN
@@ -1425,57 +1515,23 @@ class GridManagement(wxf.GridManager):
     
     def on_left_double(self, event):
         print('on_edit')
-        tree = self.tree_trunk
+        grid = self.grid_sizer
         pt = event.GetPosition()
-        item, flags = tree.HitTest(pt)
-        if item.IsOk() and not tree.IsSelected(item):
-            tree.SelectItem(item)
-            tree.SetFocusedItem(item)
-        branch = self.tree_trunk.GetSelection()
-        branch_info = self.tree_trunk.GetItemData(branch)
-        levels = branch_info['levels']
-        self.__get_changes('edit', levels[0].lower())
+        item, flags = grid.HitTest(pt)
+        if item.IsOk() and not item.IsSelection():
+            grid.SelectRow(item)
+            grid.SetFocus()
+        self.__get_changes('edit', self.tables[0].lower())
     
     def on_row_selected(self, e):
         if self.status[self.tab_name] & TX_CHANGED:
             e.Veto()
         elif e.Selecting():
-            self.b_edit.Enable()
+            _button_refresh(self, default=1)
             self.grid_sizer.cursor = (e.GetTopRow(), e.GetLeftCol())
             self.panel.this_row = self.grid_sizer.GetGridCursorRow()
             self.panel.this_record = int(self.grid_sizer.GetRowLabelValue(self.panel.this_row))
         e.Skip()
-    
-    # def on_changing_branch(self, event):
-    #     print(f'on_changing_branch ')
-    #     if self.status[self.tab_name] & TX_CHANGED:
-    #         event.Veto()
-    #         set_message(self, (1,), ('Unsaved Changes',))
-    #         main_refresh(self)
-    #
-    def on_changed_branch(self, event):
-        print('on_changed_branch')
-        tree = event.GetEventObject()
-        self.branch = tree.GetSelection()
-        branch_info = tree.GetItemData(self.branch)
-        self.branch_level = branch_info['levels'][0]
-        self.branch_data = branch_info['data']
-        self.parent_branch = tree.GetItemParent(self.branch)
-        if self.parent_branch != self._root:
-            parent_branch_info = tree.GetItemData(self.parent_branch)
-            self.parent_branch_level = parent_branch_info['levels'][0]
-            self.parent_branch_data = parent_branch_info['data']
-        else:
-            self.parent_branch_level = None
-            self.parent_branch_data = None
-        self.child_branch = None
-        self.child_branch_level = None
-        self.child_branch_data = None
-        self.status[self.tab_name] = TX_CLEAN
-        if self.tree_panel.IsShown():
-            self.tree_panel.Hide()
-            self._button_refresh()
-            main_refresh(self)
     
     def on_right_down(self, event):
         print('on_rdown')
@@ -1521,31 +1577,7 @@ class GridManagement(wxf.GridManager):
             action = ['add', self.tables[0]]
         self.__get_changes(action[0], action[1])
     
-    def _button_refresh(self, show=('all',), enable=(), focus=()):
-        
-        self.b_exit.Show()
-        self.b_exit.Enable()
-        buttons = {
-                'import': self.b_import,
-                'new': self.b_new,
-                'edit': self.b_edit,
-                'reset': self.b_reset,
-                'apply': self.b_apply,
-                'cancel': self.b_cancel
-                }
-        for k, v in buttons.items():
-            if k in show or 'all' in show:
-                v.Show()
-                if k in enable:
-                    v.Enable()
-                    if k in focus:
-                        v.SetFocus()
-                else:
-                    v.Disable()
-            else:
-                v.Hide()
-                v.Disable()
-    
+  
     def on_import_button(self, event):
         home = wx.GetHomeDir()
         if import_file := wx.FileSelector('select csv file to import',
@@ -1590,7 +1622,7 @@ class GridManagement(wxf.GridManager):
     def on_cancel_button(self, event):
         set_message(self, (1,), message='')
         self.panel.Hide()
-        self._button_refresh(enable=('new', 'edit'))
+        _button_refresh(self, default=1)
         self.status[self.tab_name] = TX_CLEAN
         # self.Layout()
         main_refresh(self)
@@ -1749,18 +1781,21 @@ class GenericPanelActions:
     #             field.SetValue('')
     
     def load_values_from_branch(self, branch_data):
-        min_date = START_DATE
-        max_date = END_DATE
         row = branch_data
+        if 'parent' in self.this_panel.keys():
+            self.this_parent = row.get('parent', 0)
+            prow = self.parent_table.rows.get(self.this_parent, {})
+        else:
+            prow = {}
+
+        min_date = prow.get('start_date', START_DATE)
+        max_date = prow.get('end_date', END_DATE)
+
         if 'grandparent' in self.this_panel.keys():
             self.set_combo('grandparent', table=self.grandparent_table, key=row['grandparent'])
             self.set_combo('parent', table=self.parent_table, parent=row['grandparent'], key=row['parent'])
-            min_date = dict(self.this_table.rows[self.lookup_lists['grandparent'][0]])['start_date']
-            max_date = dict(self.this_table.rows[self.lookup_lists['grandparent'][0]])['end_date']
         elif 'parent' in self.this_panel.keys():
             self.set_combo('parent', table=self.parent_table, key=row['parent'])
-            min_date = dict(self.this_table.rows[self.lookup_lists['parent'][0]])['start_date']
-            max_date = dict(self.this_table.rows[self.lookup_lists['parent'][0]])['end_date']
         elif 'categories' in self.this_panel.keys():
             self.set_combo('categories', key=row['category'])
             self.set_combo('subcategories', key=row['subcategory'])
@@ -1786,20 +1821,23 @@ class GenericPanelActions:
                 field.SetValue(row[k])
     
     def load_values_from_row(self, **kwargs):
-        min_date = START_DATE
-        max_date = END_DATE
         self.this_row = self.parent.grid_sizer.GetGridCursorRow()
         self.this_record = int(self.parent.grid_sizer.GetRowLabelValue(self.this_row))
-        row = dict(self.this_table.rows[self.this_record])
+        row = self.this_table.rows.get(self.this_record, {})
+        if 'parent' in self.this_panel.keys():
+            self.this_parent = row.get('parent', 0)
+            prow = self.parent_table.rows.get(self.this_parent, {})
+        else:
+            prow = {}
+
+        min_date = prow.get('start_date', START_DATE)
+        max_date = prow.get('end_date', END_DATE)
+
         if 'grandparent' in self.this_panel.keys():
             self.set_combo('grandparent', table=self.grandparent_table, key=row['grandparent'])
             self.set_combo('parent', table=self.parent_table, parent=row['grandparent'], key=row['parent'])
-            min_date = dict(self.this_table.rows[self.lookup_lists['grandparent'][0]])['start_date']
-            max_date = dict(self.this_table.rows[self.lookup_lists['grandparent'][0]])['end_date']
         elif 'parent' in self.this_panel.keys():
             self.set_combo('parent', table=self.parent_table, key=row['parent'])
-            min_date = dict(self.this_table.rows[self.lookup_lists['parent'][0]])['start_date']
-            max_date = dict(self.this_table.rows[self.lookup_lists['parent'][0]])['end_date']
         elif 'categories' in self.this_panel.keys():
             self.set_combo('categories', key=row['category'])
             self.set_combo('subcategories', key=row['subcategory'])
@@ -1824,60 +1862,60 @@ class GenericPanelActions:
             else:
                 field.SetValue(row[k])
     
-    def apply_values(self, **kwargs):
-        assert self.base.is_new or self.base.is_edit, f'no valid action in progress'
-        is_valid = True
-        these_dates = {}
-        row = dict(self.this_table.rows.get(self.this_record, {}))
-        if parent := self.this_panel.get('parent', ''):
-            self.parent_record = self.lookup_lists['parent'][1].get(getattr(self, parent).GetValue(), 0)
-            self.parent_row = self.parent_table.rows.get(self.parent_record, {})
-        else:
-            self.parent_record = 0
-
-        new_data = {}
-        new_value = None
-        for k, v in self.this_panel.items():
-            p_field = getattr(self, v)
-            if k in LOOKUPS.keys():
-                if not (new_value := self.lookup_lists[k][0]):
-                    is_valid = False
-                    set_message(self, (1,), ('error detected',),
-                                message=f'lookup {p_field.Name} cannot be blank')
-            else:
-                new_value = p_field.GetValue()
-            if self.base.is_new or new_value != row[k]:
-                if isinstance(p_field, wx._adv.DatePickerCtrl):
-                    new_data[k] = new_value.FormatISODate()
-                    these_dates[k] = datetime.strptime(new_data[k], '%Y-%m-%d').date()
-                else:
-                    new_data[k] = new_value
-        if self.parent_record:
-            if these_dates.get('start_date') and these_dates['start_date'] < self.parent_row.get('start_date', 0):
-                is_valid = False
-                set_message(self, (1,), ('error detected',),
-                            message=f'start_date {these_dates["start_date"]} is before '
-                                    f'parent start_date {self.parent_row["start_date"]}')
-            if these_dates.get('end_date') and these_dates['end_date'] > self.parent_row.get('end_date', 0):
-                is_valid = False
-                set_message(self, (1,), ('error detected',),
-                            message=f'end_date {these_dates["end_date"]} is after '
-                                    f'parent end_date {self.parent_row["end_date"]}')
-        if is_valid:
-            if self.base.is_new:
-                new_data['sort'] = self.this_table.rowcount + 1
-                action = 'insert'
-            else:
-                new_data['key'] = self.this_record
-                action = 'update'
-            if is_valid := self.this_table.process(action, **new_data):
-                set_message(self, (1,), (f'Successful {action}',), message='')
-                self.this_table.process('fetch')
-            else:
-                set_message(self, (1,), ('Error detected',), message=self.this_table.get_message())
-        
-        return is_valid
-    
+    # def apply_values(self, **kwargs):
+    #     assert self.base.is_new or self.base.is_edit, f'no valid action in progress'
+    #     is_valid = True
+    #     these_dates = {}
+    #     row = dict(self.this_table.rows.get(self.this_record, {}))
+    #     if parent := self.this_panel.get('parent', ''):
+    #         self.parent_record = self.lookup_lists['parent'][1].get(getattr(self, parent).GetValue(), 0)
+    #         self.parent_row = self.parent_table.rows.get(self.parent_record, {})
+    #     else:
+    #         self.parent_record = 0
+    #
+    #     new_data = {}
+    #     new_value = None
+    #     for k, v in self.this_panel.items():
+    #         p_field = getattr(self, v)
+    #         if k in LOOKUPS.keys():
+    #             if not (new_value := self.lookup_lists[k][0]):
+    #                 is_valid = False
+    #                 set_message(self, (1,), ('error detected',),
+    #                             message=f'lookup {p_field.Name} cannot be blank')
+    #         else:
+    #             new_value = p_field.GetValue()
+    #         if self.base.is_new or new_value != row[k]:
+    #             if isinstance(p_field, wx._adv.DatePickerCtrl):
+    #                 new_data[k] = new_value.FormatISODate()
+    #                 these_dates[k] = datetime.strptime(new_data[k], '%Y-%m-%d').date()
+    #             else:
+    #                 new_data[k] = new_value
+    #     if self.parent_record:
+    #         if these_dates.get('start_date') and these_dates['start_date'] < self.parent_row.get('start_date', 0):
+    #             is_valid = False
+    #             set_message(self, (1,), ('error detected',),
+    #                         message=f'start_date {these_dates["start_date"]} is before '
+    #                                 f'parent start_date {self.parent_row["start_date"]}')
+    #         if these_dates.get('end_date') and these_dates['end_date'] > self.parent_row.get('end_date', 0):
+    #             is_valid = False
+    #             set_message(self, (1,), ('error detected',),
+    #                         message=f'end_date {these_dates["end_date"]} is after '
+    #                                 f'parent end_date {self.parent_row["end_date"]}')
+    #     if is_valid:
+    #         if self.base.is_new:
+    #             new_data['sort'] = self.this_table.rowcount + 1
+    #             action = 'insert'
+    #         else:
+    #             new_data['key'] = self.this_record
+    #             action = 'update'
+    #         if is_valid := self.this_table.process_db(action, **new_data):
+    #             set_message(self, (1,), (f'Successful {action}',), message='')
+    #             self.this_table.process_db('fetch')
+    #         else:
+    #             set_message(self, (1,), ('Error detected',), message=self.this_table.get_message())
+    #
+    #     return is_valid
+    #
     # def apply(self, **kwargs):
     #     assert self.base.is_new or self.base.is_edit, f'no valid action in progress'
     #     is_valid = True
@@ -1935,10 +1973,11 @@ class GenericPanelActions:
     def set_combo(self, field_name, table=None, child_table=None, parent=0, key=0):
         if not table:
             table = self.base.db_tables[field_name]
-        if table.rowcount != len(table.rows):
+        if table.rowcount != table.sel_rowcount or table.tab_changed:
             table.process('fetch')
-        if child_table and child_table.rowcount != len(child_table.rows):
-            child_table.process('fetch')
+        if child_table and (child_table.rowcount != child_table.sel_rowcount or
+                            child_table.tab_changed):
+            child_table.process_db('fetch')
         combo_list = {'description not found': 0}
         for test_key, row in (
                 d := {k: v for k, v in table.rows.items() if not parent or parent == v['parent']}).items():
@@ -2017,7 +2056,7 @@ class GenericPanelActions:
             self.status[self.tab_name] |= TX_CHANGED
             if self.status[self.tab_name] | TX_RESET:
                 self.status[self.tab_name] ^= TX_RESET
-            self.parent._button_refresh(enable=('reset', 'apply', 'cancel'))
+            _button_refresh(self.parent, enable=('reset', 'apply', 'cancel'))
         # event.Skip()
     
     def _on_enter(self, event):
@@ -2305,16 +2344,19 @@ class Summary(wxf.Summary):
         super().__init__(parent, name=tab_name)
         self.base = self.GetTopLevelParent()
         self.tables = tables
+        self.buttons = ['refresh']
+        self.button_settings = [('all',), ('refresh'), ()]
+        self.button_defaults = [('all',), ('refresh'), ()]
         self.__summary_init()
     
     def __summary_init(self):
         
         account_data = self.base.db_tables.get(self.tables[0], None)
         transaction_data = self.base.db_tables.get(self.tables[1], None)
-        if account_data.rowcount != account_data.sel_rowcount:
-            account_data.process('fetch')
-        if transaction_data.rowcount != transaction_data.sel_rowcount:
-            transaction_data.process('fetch')
+        if account_data.rowcount != account_data.sel_rowcount or account_data.tab_changed:
+            account_data.process_db('fetch')
+        if transaction_data.rowcount != transaction_data.sel_rowcount or transaction_data.tab_changed:
+            transaction_data.process_db('fetch')
         values = {'Income': sum(v['amount'] for v in transaction_data.rows.values() if v['amount'] > 0),
                   'Expenditure': sum(v['amount'] for v in transaction_data.rows.values() if v['amount'] < 0),
                   'Balance': sum(v['initial'] for v in account_data.rows.values()) + sum(
@@ -2331,4 +2373,8 @@ class Summary(wxf.Summary):
         
         self.summary_sizer.Clear()
         self.summary_sizer.AddMany(self.summary_cell_values)
+        _button_refresh(self, default=1)
         main_refresh(self)
+        
+    def on_refresh_button(self, event):
+        self.__summary_init()
